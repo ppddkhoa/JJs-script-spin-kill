@@ -1,4 +1,4 @@
---// === VISION5 - ESP KIỂU HÌNH + XOAY + CAMERA ===
+--// === VISION5 - ESP TOÀN BỘ SERVER + XOAY ===
 local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
 local Me,Cam = Players.LocalPlayer,workspace.CurrentCamera
 local Tar,Ang,Hien = nil,0,true
@@ -7,7 +7,7 @@ local C = {Xoay=false,Vung=20,BanKinh=9,TocDo=3.5,Cao=4}
 local KhongSatThuong = nil
 local ESP_Container = {}
 
--- Tìm mục tiêu
+-- Tìm mục tiêu khóa xoay
 local function Lay()
     local M = Me.Character
     if not M or not M:FindFirstChild("HumanoidRootPart") then return nil end
@@ -63,7 +63,7 @@ local function ToScreen(pos)
     return ok and Vector2.new(scr.X,scr.Y) or nil, scr.Z
 end
 
--- Tạo ESP kiểu chính xác như hình
+-- Tạo ESP cho 1 người (áp dụng cho tất cả)
 local function TaoESP(Nguoi,NhanVat)
     if not NhanVat or ESP_Container[Nguoi] then return end
     local HM = NhanVat:WaitForChild("Humanoid",5)
@@ -71,14 +71,14 @@ local function TaoESP(Nguoi,NhanVat)
     if not HM or not HR then return end
 
     local ESP = {}
-    -- Khung viền đỏ bao quanh nhân vật
+    -- Khung viền đỏ bao quanh
     ESP.Khung = Instance.new("Frame")
     ESP.Khung.BackgroundTransparency = 1
     ESP.Khung.BorderSizePixel = 2
     ESP.Khung.BorderColor3 = Color3.new(1,0,0)
     ESP.Khung.Parent = Gui
 
-    -- Tên người chơi trên đầu
+    -- Tên trên đầu
     ESP.Ten = Instance.new("TextLabel")
     ESP.Ten.BackgroundTransparency = 1
     ESP.Ten.TextColor3 = Color3.new(1,1,1)
@@ -117,7 +117,7 @@ local function TaoESP(Nguoi,NhanVat)
     ESP_Container[Nguoi] = ESP
 end
 
--- Cập nhật ESP liên tục
+-- Cập nhật ESP cho TẤT CẢ
 local function CapNhatTatCaESP()
     for Nguoi,ESP in pairs(ESP_Container) do
         local NhanVat = Nguoi.Character
@@ -132,7 +132,7 @@ local function CapNhatTatCaESP()
         if VT and DoSau>0 then
             local KichThuoc = math.clamp(2200/DoSau,40,180)
             local TiLeMau = HM.Health/HM.MaxHealth
-            -- Vị trí & kích thước khung
+            -- Vị trí & kích thước
             ESP.Khung.Position = UDim2.fromOffset(VT.X-KichThuoc/2,VT.Y-KichThuoc*1.1)
             ESP.Khung.Size = UDim2.fromOffset(KichThuoc,KichThuoc*2.2)
             -- Tên
@@ -150,17 +150,17 @@ local function CapNhatTatCaESP()
     end
 end
 
--- Tự động thêm người mới / vừa hồi sinh
-Players.PlayerAdded:Connect(function(Nguoi)
-    Nguoi.CharacterAdded:Connect(function() task.wait(0.1) if Gui then TaoESP(Nguoi,Nguoi.Character) end end)
-    if Nguoi.Character and Gui then TaoESP(Nguoi,Nguoi.Character) end
-end)
+-- === TẠO ESP CHO TẤT CẢ NGƯỜI + TỰ ĐỘNG BẮT NGƯỜI MỚI ===
 for _,Nguoi in next,Players:GetPlayers() do
     if Nguoi~=Me then
-        Nguoi.CharacterAdded:Connect(function() task.wait(0.1) if Gui then TaoESP(Nguoi,Nguoi.Character) end end)
         if Nguoi.Character then TaoESP(Nguoi,Nguoi.Character) end
+        Nguoi.CharacterAdded:Connect(function() task.wait(0.1) TaoESP(Nguoi,Nguoi.Character) end)
     end
 end
+Players.PlayerAdded:Connect(function(Nguoi)
+    Nguoi.CharacterAdded:Connect(function() task.wait(0.1) TaoESP(Nguoi,Nguoi.Character) end)
+    if Nguoi.Character then TaoESP(Nguoi,Nguoi.Character) end
+end)
 
 -- Vòng lặp chính xoay + camera
 Run.RenderStepped:Connect(function(dt)
@@ -186,9 +186,9 @@ Run.RenderStepped:Connect(function(dt)
     CapNhatTatCaESP()
 end)
 
--- === GIAO DIỆN CHÍNH ===
+-- === GIAO DIỆN ===
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "Vision5_ESP_Final"
+Gui.Name = "Vision5_ESP_AllServer"
 Gui.ResetOnSpawn = false
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = game.CoreGui
@@ -214,7 +214,7 @@ Win.Parent = Gui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0,35)
 Title.BackgroundColor3 = Color3.new(0.2,0.3,0.7)
-Title.Text = "✅ VISION5 - ESP KIỂU HÌNH"
+Title.Text = "✅ VISION5 - ESP TOÀN SERVER"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
@@ -322,5 +322,5 @@ Thanh("📏 Phạm vi tìm",1,30,20,"Vung",126)
 Thanh("⭕ Bán kính xoay",1,55,9,"BanKinh",169)
 Thanh("📐 Độ cao",0,12,4,"Cao",212)
 
-local TenMucTieu=Instance.new("TextLabel") TenMucTieu.Size=UDim2.new(1,0,0,35) TenMucTieu.Position=UDim2.new(0,0,0,255) TenMucTieu.BackgroundColor3=Color3.new(0.15,0.15,0.3) TenMucTieu.Text="🎯 CHƯA CÓ MỤC TIÊU" TenMucTieu.TextColor3=Color3.new(1,0.4,0.4) TenMucTieu.Font=Enum.Font.GothamBold TenMucTieu.TextSize=14 TenMucTieu.Parent=NoiDung
+local TenMucTieu=Instance.new("TextLabel") TenMucTieu.Size=UDim2.new(1,0,0,35) TenMucTieu.Position=UDim2.new(0,0,0,255) TenMucTieu.BackgroundColor3=Color3.new(0.15,0.15,0.3) TenMucTieu.Text="🎯 CHƯA CÓ MỤC TIÊU" TenMucTieu.TextColor3 = Color3.new(1,0.4,0.4) TenMucTieu.Font=Enum.Font.GothamBold TenMucTieu.TextSize=14 TenMucTieu.Parent=NoiDung
 Run.Heartbeat:Connect(function() TenMucTieu.Text=Tar and"🎯 KHÓA: "..string.upper(Players:GetPlayerFromCharacter(Tar).Name)or"🎯 CHƯA CÓ MỤC TIÊU" end)
