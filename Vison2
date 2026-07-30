@@ -1,7 +1,7 @@
---// === XOAY + CHỐNG HẾT SÁT THƯƠNG ===
+--// === XOAY VÒNG + CAMERA TẬP TRUNG VÀO KẺ ĐỊCH ===
 local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
-local Me,Mouse = Players.LocalPlayer,Players.LocalPlayer:GetMouse()
-local Tar,Ang,Hien = nil,0,true
+local Me,Mouse,Cam = Players.LocalPlayer,Players.LocalPlayer:GetMouse(),workspace.CurrentCamera
+local Tar,Ang,Hien,CamLuu = nil,0,true,nil
 local C = {Xoay=false,Vung=20,BanKinh=9,TocDo=3.5,Cao=4}
 local KhongSatThuong = nil
 
@@ -24,19 +24,17 @@ local function Lay()
     return Best
 end
 
--- Bật/Tắt chống sát thương
+-- Chống sát thương
 local function ChongSatThuong(Bat)
     local M = Me.Character
     if not M or not M:FindFirstChild("Humanoid") then return end
     local HM = M.Humanoid
     if Bat then
-        -- Khóa máu tối đa, bỏ qua mọi sát thương
         HM.FallDamagePerFoot = 0
         HM.MaxHealth = math.huge
         HM.Health = math.huge
         KhongSatThuong = HM.HealthChanged:Connect(function() HM.Health = math.huge end)
     else
-        -- Khôi phục bình thường
         if KhongSatThuong then KhongSatThuong:Disconnect() end
         HM.FallDamagePerFoot = 0.25
         HM.MaxHealth = 100
@@ -44,27 +42,37 @@ local function ChongSatThuong(Bat)
     end
 end
 
--- Vòng lặp chính
+-- Vòng lặp chính + CAMERA TẬP TRUNG KẺ ĐỊCH
 Run.RenderStepped:Connect(function(dt)
     local M = Me.Character
     if not M or not M:FindFirstChild("HumanoidRootPart") then return end
     local MR = M.HumanoidRootPart
 
+    -- TẮT XOAY → KHÔI PHỤC CAMERA BÌNH THƯỜNG
     if not C.Xoay or not Tar then
         M.Humanoid.GravityScale = 1
         M.Humanoid.PlatformStand = false
+        if CamLuu then Cam.CameraSubject = CamLuu Cam.CameraType = Enum.CameraType.Custom CamLuu=nil end
         return
     end
 
+    -- KIỂM TRA MỤC TIÊU CÒN SỐNG
     local HM = Tar:FindFirstChild("Humanoid")
     local HR = Tar:FindFirstChild("HumanoidRootPart")
     if not HM or not HR or HM.Health<=0 then
         Tar = nil
         M.Humanoid.GravityScale = 1
         M.Humanoid.PlatformStand = false
+        if CamLuu then Cam.CameraSubject = CamLuu Cam.CameraType = Enum.CameraType.Custom CamLuu=nil end
         return
     end
 
+    -- BẬT XOAY → CAMERA CHUYỂN VỀ THÂN KẺ ĐỊCH
+    if not CamLuu then CamLuu = Cam.CameraSubject end -- Lưu trạng thái cũ
+    Cam.CameraSubject = HR -- Đặt camera theo thân kẻ địch
+    Cam.CameraType = Enum.CameraType.Follow -- Tự theo dõi mục tiêu
+
+    -- Xoay vòng bình thường
     Ang += C.TocDo * dt
     MR.CFrame = CFrame.new(HR.Position + Vector3.new(math.cos(Ang)*C.BanKinh,C.Cao,math.sin(Ang)*C.BanKinh), HR.Position)
     M.Humanoid.GravityScale = 0
@@ -76,7 +84,7 @@ local Gui = Instance.new("ScreenGui") Gui.ResetOnSpawn=false Gui.Parent=game.Cor
 local NutAnHien = Instance.new("TextButton") NutAnHien.Size=UDim2.fromOffset(65,28) NutAnHien.Position=UDim2.new(0.01,0,0.01,0) NutAnHien.BackgroundColor3=Color3.new(0.2,0.2,0.5) NutAnHien.Text="🔽 ẨN" NutAnHien.TextColor3=Color3.new(1,1,1) NutAnHien.Font=Enum.Font.GothamBold NutAnHien.TextSize=12 NutAnHien.Parent=Gui
 
 local Win = Instance.new("Frame") Win.Size=UDim2.fromOffset(280,460) Win.Position=UDim2.new(0.5,-140,0.2,0) Win.BackgroundColor3=Color3.new(0.1,0.1,0.15) Win.BorderSizePixel=2 Win.BorderColor3=Color3.new(0.3,0.3,0.6) Win.Parent=Gui
-local Title = Instance.new("TextLabel") Title.Size=UDim2.new(1,0,0,32) Title.BackgroundColor3=Color3.new(0.2,0.2,0.5) Title.Text="XOAY + CHỐNG HẾT SÁT THƯƠNG" Title.TextColor3=Color3.new(1,1,1) Title.Font=Enum.Font.GothamBold Title.TextSize=15 Title.Parent=Win
+local Title = Instance.new("TextLabel") Title.Size=UDim2.new(1,0,0,32) Title.BackgroundColor3=Color3.new(0.2,0.2,0.5) Title.Text="XOAY + CAMERA THEO KẺ ĐỊCH" Title.TextColor3=Color3.new(1,1,1) Title.Font=Enum.Font.GothamBold Title.TextSize=15 Title.Parent=Win
 local Drag,a,b=false,nil,nil
 Win.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then Drag,a,b=true,i.Position,Win.Position end end)
 UI.InputChanged:Connect(function(i) if Drag then Win.Position=UDim2.new(b.X.Scale,b.X.Offset+(i.Position-a).X,b.Y.Scale,b.Y.Offset+(i.Position-a).Y) end end)
@@ -89,19 +97,20 @@ local NoiDung = Instance.new("Frame") NoiDung.Size=UDim2.new(1,-8,1,-40) NoiDung
 local NutChon = Instance.new("TextButton") NutChon.Size=UDim2.new(1,0,0,32) NutChon.Position=UDim2.new(0,0,0,0) NutChon.BackgroundColor3=Color3.new(0.2,0.45,0.8) NutChon.Text="🎯 CHỌN MỤC TIÊU" NutChon.TextColor3=Color3.new(1,1,1) NutChon.Font=Enum.Font.GothamBold NutChon.TextSize=14 NutChon.Parent=NoiDung
 NutChon.MouseButton1Click:Connect(function() Tar=Lay() end)
 
--- Nút bật/tắt xoay + tự bật/tắt chống sát thương
+-- Nút bật/tắt xoay + camera
 local NutXoay = Instance.new("TextButton") NutXoay.Size=UDim2.new(1,0,0,32) NutXoay.Position=UDim2.new(0,0,0,38) NutXoay.BackgroundColor3=Color3.new(0.3,0.3,0.3) NutXoay.Text="🌀 BẬT XOAY" NutXoay.TextColor3=Color3.new(1,1,1) NutXoay.Font=Enum.Font.GothamBold NutXoay.TextSize=14 NutXoay.Parent=NoiDung
 NutXoay.MouseButton1Click:Connect(function()
     C.Xoay = not C.Xoay
     if C.Xoay then
         NutXoay.BackgroundColor3 = Color3.new(0.2,0.6,0.2)
-        NutXoay.Text = "🟢 ĐANG XOAY - CHỐNG ĐAU"
+        NutXoay.Text = "🟢 ĐANG XOAY - CAMERA THEO ĐỊCH"
         ChongSatThuong(true)
     else
         NutXoay.BackgroundColor3 = Color3.new(0.3,0.3,0.3)
         NutXoay.Text = "🔴 ĐÃ DỪNG"
         ChongSatThuong(false)
         if Me.Character then Me.Character.Humanoid.GravityScale=1 Me.Character.Humanoid.PlatformStand=false end
+        if CamLuu then Cam.CameraSubject = CamLuu Cam.CameraType = Enum.CameraType.Custom CamLuu=nil end
     end
 end)
 
