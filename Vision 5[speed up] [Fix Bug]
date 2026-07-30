@@ -1,4 +1,4 @@
---// === VISION5 - ESP TOÀN BỘ SERVER + XOAY ===
+--// === VISION5 - ESP DÙNG HIGHLIGHT CHÍNH THỨC + TOÀN SERVER ===
 local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
 local Me,Cam = Players.LocalPlayer,workspace.CurrentCamera
 local Tar,Ang,Hien = nil,0,true
@@ -6,6 +6,13 @@ local CamLuu,CamTypeLuu = nil,nil
 local C = {Xoay=false,Vung=20,BanKinh=9,TocDo=3.5,Cao=4}
 local KhongSatThuong = nil
 local ESP_Container = {}
+
+-- === TẠO GUI TRƯỚC - QUAN TRỌNG ĐỂ ESP HIỆN ===
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "Vision5_Highlight_ESP"
+Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent = game.CoreGui
 
 -- Tìm mục tiêu khóa xoay
 local function Lay()
@@ -63,7 +70,7 @@ local function ToScreen(pos)
     return ok and Vector2.new(scr.X,scr.Y) or nil, scr.Z
 end
 
--- Tạo ESP cho 1 người (áp dụng cho tất cả)
+-- === TẠO ESP DÙNG HIGHLIGHT + TÊN + MÁU ===
 local function TaoESP(Nguoi,NhanVat)
     if not NhanVat or ESP_Container[Nguoi] then return end
     local HM = NhanVat:WaitForChild("Humanoid",5)
@@ -71,12 +78,14 @@ local function TaoESP(Nguoi,NhanVat)
     if not HM or not HR then return end
 
     local ESP = {}
-    -- Khung viền đỏ bao quanh
-    ESP.Khung = Instance.new("Frame")
-    ESP.Khung.BackgroundTransparency = 1
-    ESP.Khung.BorderSizePixel = 2
-    ESP.Khung.BorderColor3 = Color3.new(1,0,0)
-    ESP.Khung.Parent = Gui
+    -- Highlight viền đỏ bao quanh toàn bộ nhân vật
+    ESP.Highlight = Instance.new("Highlight")
+    ESP.Highlight.FillTransparency = 1
+    ESP.Highlight.OutlineTransparency = 0
+    ESP.Highlight.OutlineColor = Color3.new(1,0,0)
+    ESP.Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    ESP.Highlight.Adornee = NhanVat
+    ESP.Highlight.Parent = NhanVat
 
     -- Tên trên đầu
     ESP.Ten = Instance.new("TextLabel")
@@ -89,35 +98,21 @@ local function TaoESP(Nguoi,NhanVat)
     ESP.Ten.Parent = Gui
 
     -- Thanh máu ngang trên đầu
-    ESP.ThanhMauTren = Instance.new("Frame")
-    ESP.ThanhMauTren.Size = UDim2.new(0,80,0,6)
-    ESP.ThanhMauTren.BackgroundColor3 = Color3.new(0.2,0.2,0.2)
-    ESP.ThanhMauTren.BorderSizePixel = 1
-    ESP.ThanhMauTren.BorderColor3 = Color3.new(1,1,1)
-    ESP.ThanhMauTren.Parent = Gui
-    ESP.MauTren = Instance.new("Frame")
-    ESP.MauTren.BackgroundColor3 = Color3.new(0,1,0)
-    ESP.MauTren.Size = UDim2.new(1,0,1,0)
-    ESP.MauTren.Parent = ESP.ThanhMauTren
-
-    -- Thanh máu dọc bên trái
-    ESP.ThanhMauDoc = Instance.new("Frame")
-    ESP.ThanhMauDoc.Size = UDim2.new(0,6,0,100)
-    ESP.ThanhMauDoc.BackgroundColor3 = Color3.new(0.2,0.2,0.2)
-    ESP.ThanhMauDoc.BorderSizePixel = 1
-    ESP.ThanhMauDoc.BorderColor3 = Color3.new(1,1,1)
-    ESP.ThanhMauDoc.Parent = Gui
-    ESP.MauDoc = Instance.new("Frame")
-    ESP.MauDoc.BackgroundColor3 = Color3.new(0,1,0)
-    ESP.MauDoc.AnchorPoint = Vector2.new(0,1)
-    ESP.MauDoc.Position = UDim2.new(0,0,1,0)
-    ESP.MauDoc.Size = UDim2.new(1,0,1,0)
-    ESP.MauDoc.Parent = ESP.ThanhMauDoc
+    ESP.ThanhMau = Instance.new("Frame")
+    ESP.ThanhMau.Size = UDim2.new(0,80,0,6)
+    ESP.ThanhMau.BackgroundColor3 = Color3.new(0.2,0.2,0.2)
+    ESP.ThanhMau.BorderSizePixel = 1
+    ESP.ThanhMau.BorderColor3 = Color3.new(1,1,1)
+    ESP.ThanhMau.Parent = Gui
+    ESP.Mau = Instance.new("Frame")
+    ESP.Mau.BackgroundColor3 = Color3.new(0,1,0)
+    ESP.Mau.Size = UDim2.new(1,0,1,0)
+    ESP.Mau.Parent = ESP.ThanhMau
 
     ESP_Container[Nguoi] = ESP
 end
 
--- Cập nhật ESP cho TẤT CẢ
+-- Cập nhật vị trí tên + thanh máu
 local function CapNhatTatCaESP()
     for Nguoi,ESP in pairs(ESP_Container) do
         local NhanVat = Nguoi.Character
@@ -132,25 +127,18 @@ local function CapNhatTatCaESP()
         if VT and DoSau>0 then
             local KichThuoc = math.clamp(2200/DoSau,40,180)
             local TiLeMau = HM.Health/HM.MaxHealth
-            -- Vị trí & kích thước
-            ESP.Khung.Position = UDim2.fromOffset(VT.X-KichThuoc/2,VT.Y-KichThuoc*1.1)
-            ESP.Khung.Size = UDim2.fromOffset(KichThuoc,KichThuoc*2.2)
             -- Tên
             ESP.Ten.Position = UDim2.fromOffset(VT.X-40,VT.Y-KichThuoc*1.4)
             ESP.Ten.Text = Nguoi.Name
-            -- Thanh máu ngang
-            ESP.ThanhMauTren.Position = UDim2.fromOffset(VT.X-40,VT.Y-KichThuoc*1.2)
-            ESP.MauTren.Size = UDim2.new(TiLeMau,0,1,0)
-            ESP.MauTren.BackgroundColor3 = TiLeMau>0.3 and Color3.new(0,1,0) or Color3.new(1,0,0)
-            -- Thanh máu dọc
-            ESP.ThanhMauDoc.Position = UDim2.fromOffset(VT.X-KichThuoc/2-12,VT.Y-KichThuoc*0.1)
-            ESP.MauDoc.Size = UDim2.new(1,0,TiLeMau,0)
-            ESP.MauDoc.BackgroundColor3 = TiLeMau>0.3 and Color3.new(0,1,0) or Color3.new(1,0,0)
+            -- Thanh máu
+            ESP.ThanhMau.Position = UDim2.fromOffset(VT.X-40,VT.Y-KichThuoc*1.2)
+            ESP.Mau.Size = UDim2.new(TiLeMau,0,1,0)
+            ESP.Mau.BackgroundColor3 = TiLeMau>0.3 and Color3.new(0,1,0) or Color3.new(1,0,0)
         end
     end
 end
 
--- === TẠO ESP CHO TẤT CẢ NGƯỜI + TỰ ĐỘNG BẮT NGƯỜI MỚI ===
+-- === TẠO CHO TẤT CẢ NGƯỜI TRONG SERVER + TỰ ĐỘNG BẮT NGƯỜI MỚI ===
 for _,Nguoi in next,Players:GetPlayers() do
     if Nguoi~=Me then
         if Nguoi.Character then TaoESP(Nguoi,Nguoi.Character) end
@@ -186,13 +174,7 @@ Run.RenderStepped:Connect(function(dt)
     CapNhatTatCaESP()
 end)
 
--- === GIAO DIỆN ===
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "Vision5_ESP_AllServer"
-Gui.ResetOnSpawn = false
-Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Gui.Parent = game.CoreGui
-
+-- === GIAO DIỆN CHÍNH ===
 local NutAnHien = Instance.new("TextButton")
 NutAnHien.Size = UDim2.fromOffset(70,30)
 NutAnHien.Position = UDim2.new(0.01,0,0.01,0)
@@ -204,7 +186,7 @@ NutAnHien.TextSize = 12
 NutAnHien.Parent = Gui
 
 local Win = Instance.new("Frame")
-Win.Size = UDim2.fromOffset(290,550)
+Win.Size = UDim2.fromOffset(290,520)
 Win.Position = UDim2.new(0.5,-145,0.12,0)
 Win.BackgroundColor3 = Color3.new(0.08,0.08,0.15)
 Win.BorderSizePixel = 2
@@ -214,7 +196,7 @@ Win.Parent = Gui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0,35)
 Title.BackgroundColor3 = Color3.new(0.2,0.3,0.7)
-Title.Text = "✅ VISION5 - ESP TOÀN SERVER"
+Title.Text = "✅ VISION5 - HIGHLIGHT ESP"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
@@ -322,5 +304,5 @@ Thanh("📏 Phạm vi tìm",1,30,20,"Vung",126)
 Thanh("⭕ Bán kính xoay",1,55,9,"BanKinh",169)
 Thanh("📐 Độ cao",0,12,4,"Cao",212)
 
-local TenMucTieu=Instance.new("TextLabel") TenMucTieu.Size=UDim2.new(1,0,0,35) TenMucTieu.Position=UDim2.new(0,0,0,255) TenMucTieu.BackgroundColor3=Color3.new(0.15,0.15,0.3) TenMucTieu.Text="🎯 CHƯA CÓ MỤC TIÊU" TenMucTieu.TextColor3 = Color3.new(1,0.4,0.4) TenMucTieu.Font=Enum.Font.GothamBold TenMucTieu.TextSize=14 TenMucTieu.Parent=NoiDung
+local TenMucTieu=Instance.new("TextLabel") TenMucTieu.Size=UDim2.new(1,0,0,35) TenMucTieu.Position=UDim2.new(0,0,0,255) TenMucTieu.BackgroundColor3=Color3.new(0.15,0.15,0.3) TenMucTieu.Text="🎯 CHƯA CÓ MỤC TIÊU" TenMucTieu.TextColor3=Color3.new(1,0.4,0.4) TenMucTieu.Font=Enum.Font.GothamBold TenMucTieu.TextSize=14 TenMucTieu.Parent=NoiDung
 Run.Heartbeat:Connect(function() TenMucTieu.Text=Tar and"🎯 KHÓA: "..string.upper(Players:GetPlayerFromCharacter(Tar).Name)or"🎯 CHƯA CÓ MỤC TIÊU" end)
