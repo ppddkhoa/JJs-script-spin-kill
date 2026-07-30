@@ -1,4 +1,4 @@
---// === VISION5 - ESP DÙNG HIGHLIGHT CHÍNH THỨC + TOÀN SERVER ===
+--// === VISION5 - HOÀN CHỈNH: CẦU VỒNG + THANH MÁU + TỰ ĐỘNG ===
 local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
 local Me,Cam = Players.LocalPlayer,workspace.CurrentCamera
 local Tar,Ang,Hien = nil,0,true
@@ -6,10 +6,11 @@ local CamLuu,CamTypeLuu = nil,nil
 local C = {Xoay=false,Vung=20,BanKinh=9,TocDo=3.5,Cao=4}
 local KhongSatThuong = nil
 local ESP_Container = {}
+local ThoiGian = 0
 
--- === TẠO GUI TRƯỚC - QUAN TRỌNG ĐỂ ESP HIỆN ===
+-- === TẠO GUI TRƯỚC - QUAN TRỌNG NHẤT ===
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "Vision5_Highlight_ESP"
+Gui.Name = "Vision5_Rainbow_Final"
 Gui.ResetOnSpawn = false
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = game.CoreGui
@@ -70,19 +71,24 @@ local function ToScreen(pos)
     return ok and Vector2.new(scr.X,scr.Y) or nil, scr.Z
 end
 
--- === TẠO ESP DÙNG HIGHLIGHT + TÊN + MÁU ===
+-- === TẠO ESP: HIGHLIGHT CẦU VỒNG + TÊN + THANH MÁU ===
 local function TaoESP(Nguoi,NhanVat)
-    if not NhanVat or ESP_Container[Nguoi] then return end
-    local HM = NhanVat:WaitForChild("Humanoid",5)
-    local HR = NhanVat:WaitForChild("HumanoidRootPart",5)
+    if not Nguoi or not NhanVat or Nguoi == Me then return end
+    -- Xóa cái cũ nếu còn sót
+    if ESP_Container[Nguoi] then
+        for _,v in pairs(ESP_Container[Nguoi]) do pcall(function() v:Destroy() end) end
+        ESP_Container[Nguoi] = nil
+    end
+    local HM = NhanVat:WaitForChild("Humanoid",3)
+    local HR = NhanVat:WaitForChild("HumanoidRootPart",3)
     if not HM or not HR then return end
 
     local ESP = {}
-    -- Highlight viền đỏ bao quanh toàn bộ nhân vật
+    -- Viền cầu vồng luôn hiện trên
     ESP.Highlight = Instance.new("Highlight")
     ESP.Highlight.FillTransparency = 1
     ESP.Highlight.OutlineTransparency = 0
-    ESP.Highlight.OutlineColor = Color3.new(1,0,0)
+    ESP.Highlight.OutlineColor = Color3.fromHSV(0,1,1)
     ESP.Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     ESP.Highlight.Adornee = NhanVat
     ESP.Highlight.Parent = NhanVat
@@ -112,14 +118,37 @@ local function TaoESP(Nguoi,NhanVat)
     ESP_Container[Nguoi] = ESP
 end
 
--- Cập nhật vị trí tên + thanh máu
-local function CapNhatTatCaESP()
+-- === TỰ ĐỘNG THÊM NGƯỜI MỚI / VỪA HỒI SINH ===
+local function KhoiTaoNguoi(Nguoi)
+    if Nguoi == Me then return end
+    -- Khi nhân vật tái tạo
+    Nguoi.CharacterAdded:Connect(function(NhanVat)
+        task.wait(0.15)
+        if Gui then TaoESP(Nguoi,NhanVat) end
+    end)
+    -- Nếu đã có nhân vật thì tạo luôn
+    if Nguoi.Character then task.wait(0.15) TaoESP(Nguoi,Nguoi.Character) end
+end
+
+-- Khởi tạo tất cả người đang có mặt
+for _,Nguoi in next,Players:GetPlayers() do KhoiTaoNguoi(Nguoi) end
+-- Lắng nghe người mới vào server
+Players.PlayerAdded:Connect(KhoiTaoNguoi)
+
+-- === VÒNG LẶP CHÍNH ===
+Run.RenderStepped:Connect(function(dt)
+    -- Đổi màu cầu vồng mượt
+    ThoiGian = (ThoiGian + dt*0.5) % 1
+    local MauCauVong = Color3.fromHSV(ThoiGian,1,1)
+
+    -- Cập nhật màu + vị trí + máu cho TẤT CẢ
     for Nguoi,ESP in pairs(ESP_Container) do
+        if ESP.Highlight then ESP.Highlight.OutlineColor = MauCauVong end
         local NhanVat = Nguoi.Character
         local HM = NhanVat and NhanVat:FindFirstChild("Humanoid")
         local HR = NhanVat and NhanVat:FindFirstChild("HumanoidRootPart")
-        if not HM or not HR or HM.Health<=0 then
-            for _,PhanTu in pairs(ESP) do PhanTu:Destroy() end
+        if not HM or not HR or HM.Health<=0 or not NhanVat:IsDescendantOf(workspace) then
+            for _,v in pairs(ESP) do pcall(function() v:Destroy() end) end
             ESP_Container[Nguoi] = nil
             continue
         end
@@ -127,40 +156,26 @@ local function CapNhatTatCaESP()
         if VT and DoSau>0 then
             local KichThuoc = math.clamp(2200/DoSau,40,180)
             local TiLeMau = HM.Health/HM.MaxHealth
-            -- Tên
+            -- Cập nhật tên
             ESP.Ten.Position = UDim2.fromOffset(VT.X-40,VT.Y-KichThuoc*1.4)
             ESP.Ten.Text = Nguoi.Name
-            -- Thanh máu
+            -- Cập nhật thanh máu
             ESP.ThanhMau.Position = UDim2.fromOffset(VT.X-40,VT.Y-KichThuoc*1.2)
             ESP.Mau.Size = UDim2.new(TiLeMau,0,1,0)
             ESP.Mau.BackgroundColor3 = TiLeMau>0.3 and Color3.new(0,1,0) or Color3.new(1,0,0)
         end
     end
-end
 
--- === TẠO CHO TẤT CẢ NGƯỜI TRONG SERVER + TỰ ĐỘNG BẮT NGƯỜI MỚI ===
-for _,Nguoi in next,Players:GetPlayers() do
-    if Nguoi~=Me then
-        if Nguoi.Character then TaoESP(Nguoi,Nguoi.Character) end
-        Nguoi.CharacterAdded:Connect(function() task.wait(0.1) TaoESP(Nguoi,Nguoi.Character) end)
-    end
-end
-Players.PlayerAdded:Connect(function(Nguoi)
-    Nguoi.CharacterAdded:Connect(function() task.wait(0.1) TaoESP(Nguoi,Nguoi.Character) end)
-    if Nguoi.Character then TaoESP(Nguoi,Nguoi.Character) end
-end)
-
--- Vòng lặp chính xoay + camera
-Run.RenderStepped:Connect(function(dt)
+    -- === PHẦN XOAY + KHÓA MỤC TIÊU ===
     local M = Me.Character
     if not M or not M:FindFirstChild("HumanoidRootPart") then Tar=nil KhoiPhuc() return end
     if Tar then
         local HM = Tar:FindFirstChild("Humanoid")
         if not HM or HM.Health<=0 or not Tar:IsDescendantOf(workspace) then Tar=nil KhoiPhuc() return end
     end
-    if not C.Xoay or not Tar then KhoiPhuc() CapNhatTatCaESP() return end
+    if not C.Xoay or not Tar then return end
     local HR = Tar:FindFirstChild("HumanoidRootPart")
-    if not HR then Tar=nil KhoiPhuc() CapNhatTatCaESP() return end
+    if not HR then Tar=nil KhoiPhuc() return end
     if not CamLuu then CamLuu,CamTypeLuu = Cam.CameraSubject,Cam.CameraType end
     Cam.CameraSubject = HR
     Cam.CameraType = Enum.CameraType.Follow
@@ -171,10 +186,9 @@ Run.RenderStepped:Connect(function(dt)
     M.HumanoidRootPart.CFrame = CFrame.new(HR.Position+Off,HR.Position)
     M.Humanoid.GravityScale = 0
     M.Humanoid.PlatformStand = true
-    CapNhatTatCaESP()
 end)
 
--- === GIAO DIỆN CHÍNH ===
+-- === GIAO DIỆN ĐẦY ĐỦ ===
 local NutAnHien = Instance.new("TextButton")
 NutAnHien.Size = UDim2.fromOffset(70,30)
 NutAnHien.Position = UDim2.new(0.01,0,0.01,0)
@@ -196,18 +210,24 @@ Win.Parent = Gui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0,35)
 Title.BackgroundColor3 = Color3.new(0.2,0.3,0.7)
-Title.Text = "✅ VISION5 - HIGHLIGHT ESP"
+Title.Text = "🌈 VISION5 - HOÀN CHỈNH"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
 Title.Parent = Win
 
+-- Kéo di chuyển GUI
 local Drag,a,b=false,nil,nil
 Win.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then Drag,a,b=true,i.Position,Win.Position end end)
 UI.InputChanged:Connect(function(i) if Drag then Win.Position=UDim2.new(b.X.Scale,b.X.Offset+(i.Position-a).X,b.Y.Scale,b.Y.Offset+(i.Position-a).Y) end end)
 UI.InputEnded:Connect(function() Drag=false end)
 
-NutAnHien.MouseButton1Click:Connect(function() Hien=not Hien Win.Visible=Hien NutAnHien.Text=Hien and"🔽 ẨN GUI"or"🔼 HIỆN GUI" end)
+-- Nút ẩn/hiện bảng điều khiển
+NutAnHien.MouseButton1Click:Connect(function()
+    Hien = not Hien
+    Win.Visible = Hien
+    NutAnHien.Text = Hien and "🔽 ẨN GUI" or "🔼 HIỆN GUI"
+end)
 
 local NoiDung = Instance.new("Frame")
 NoiDung.Size = UDim2.new(1,-10,1,-50)
@@ -249,7 +269,7 @@ NutXoay.MouseButton1Click:Connect(function()
     end
 end)
 
--- Ô nhập + nút OK
+-- Ô nhập tốc độ + nút OK
 local KhungNhap = Instance.new("Frame")
 KhungNhap.Size = UDim2.new(1,0,0,35)
 KhungNhap.Position = UDim2.new(0,0,0,84)
@@ -290,7 +310,7 @@ end
 NutOk.MouseButton1Click:Connect(CapNhatTocDo)
 NhanTocDo.FocusLost:Connect(function(e) if e then CapNhatTocDo() end end)
 
--- Thanh trượt
+-- Thanh trượt cài đặt
 local function Thanh(txt,min,max,macdinh,k,y)
     local l=Instance.new("TextLabel") l.Size=UDim2.new(1,0,0,20) l.Position=UDim2.new(0,0,0,y) l.BackgroundTransparency=1 l.Text=txt..": "..macdinh l.TextColor3=Color3.new(0.9,0.9,0.9) l.Font=Enum.Font.Gotham l.TextSize=13 l.TextXAlignment=Enum.TextXAlignment.Left l.Parent=NoiDung
     local bar=Instance.new("TextButton") bar.Size=UDim2.new(1,0,0,18) bar.Position=UDim2.new(0,0,0,y+20) bar.BackgroundColor3=Color3.new(0.2,0.2,0.4) bar.Text="" bar.Parent=NoiDung
@@ -304,5 +324,6 @@ Thanh("📏 Phạm vi tìm",1,30,20,"Vung",126)
 Thanh("⭕ Bán kính xoay",1,55,9,"BanKinh",169)
 Thanh("📐 Độ cao",0,12,4,"Cao",212)
 
+-- Hiển thị mục tiêu đang khóa
 local TenMucTieu=Instance.new("TextLabel") TenMucTieu.Size=UDim2.new(1,0,0,35) TenMucTieu.Position=UDim2.new(0,0,0,255) TenMucTieu.BackgroundColor3=Color3.new(0.15,0.15,0.3) TenMucTieu.Text="🎯 CHƯA CÓ MỤC TIÊU" TenMucTieu.TextColor3=Color3.new(1,0.4,0.4) TenMucTieu.Font=Enum.Font.GothamBold TenMucTieu.TextSize=14 TenMucTieu.Parent=NoiDung
 Run.Heartbeat:Connect(function() TenMucTieu.Text=Tar and"🎯 KHÓA: "..string.upper(Players:GetPlayerFromCharacter(Tar).Name)or"🎯 CHƯA CÓ MỤC TIÊU" end)
