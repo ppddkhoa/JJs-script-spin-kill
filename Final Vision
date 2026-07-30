@@ -1,4 +1,4 @@
---// === VISION5 - SỬA TỐC ĐỘ + TRẠNG THÁI ===
+--// === FINAL VISION - SỬA KẸT CAM + ESP TỰ ĐỘNG ===
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Me = Players.LocalPlayer
@@ -12,7 +12,7 @@ local ESP_Container = {}
 local NutXoay, TrangThai
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "Vision5_Final_Ok"
+Gui.Name = "Final_Vision_FixAll"
 Gui.ResetOnSpawn = false
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = game.CoreGui
@@ -32,7 +32,6 @@ local function Lay()
             end
         end
     end
-    -- ✅ CẬP NHẬT NGAY KHI CHỌN GẦN NHẤT
     if GanNhat then
         Tar = GanNhat
         local NguoiChon = Players:GetPlayerFromCharacter(Tar)
@@ -51,7 +50,6 @@ local function LayTheoTen(Ten)
             local TenThat = string.lower(N.Name)
             local BietDanh = string.lower(N.DisplayName or "")
             if TenThat == T or string.find(BietDanh, T, 1, true) or string.find(TenThat, T, 1, true) then
-                -- ✅ CẬP NHẬT NGAY KHI TÌM ĐƯỢC
                 Tar = N.Character
                 if TrangThai then
                     TrangThai.Text = "🎯 Khóa: "..string.upper(N.DisplayName or N.Name)
@@ -82,37 +80,91 @@ local function KhoiPhuc()
         H.PlatformStand = false
         H:ChangeState(Enum.HumanoidStateType.Running)
     end
-    if CamLuu then Cam.CameraSubject = CamLuu Cam.CameraType = CamTypeLuu end
-    CamLuu, CamTypeLuu = nil, nil
+    if CamLuu and CamTypeLuu then
+        Cam.CameraSubject = CamLuu
+        Cam.CameraType = CamTypeLuu
+    else
+        Cam.CameraSubject = Me.Character and Me.Character.Humanoid or Me
+        Cam.CameraType = Enum.CameraType.Custom
+    end
+    CamLuu, CamTypeLuu, Tar = nil, nil, nil
+    if TrangThai then TrangThai.Text = "🎯 Chưa chọn" end
 end
 
 local function TaoESP(Nguoi, NhanVat)
     if not Nguoi or Nguoi == Me or not NhanVat then return end
-    if ESP_Container[Nguoi] then for _,v in pairs(ESP_Container[Nguoi]) do pcall(function() v:Destroy() end) end end
-    local H = NhanVat:FindFirstChild("Humanoid") local R = NhanVat:FindFirstChild("HumanoidRootPart")
+    if ESP_Container[Nguoi] then
+        for _,v in pairs(ESP_Container[Nguoi]) do pcall(function() v:Destroy() end) end
+    end
+    local H = NhanVat:FindFirstChild("Humanoid")
+    local R = NhanVat:FindFirstChild("HumanoidRootPart")
     if not H or not R then return end
     local E = {}
     E.HL = Instance.new("Highlight")
-    E.HL.FillTransparency = 1 E.HL.OutlineTransparency = 0
+    E.HL.FillTransparency = 1
+    E.HL.OutlineTransparency = 0
     E.HL.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    E.HL.Adornee = NhanVat E.HL.Parent = Gui
+    E.HL.Adornee = NhanVat
+    E.HL.Parent = Gui
     E.Ten = Instance.new("TextLabel")
-    E.Ten.BackgroundTransparency = 1 E.Ten.TextColor3 = Color3.new(1,1,1)
-    E.Ten.Font = Enum.Font.GothamBold E.Ten.TextSize = 14
-    E.Ten.TextStrokeTransparency = 0 E.Ten.TextStrokeColor3 = Color3.new(0,0,0) E.Ten.Parent = Gui
+    E.Ten.BackgroundTransparency = 1
+    E.Ten.TextColor3 = Color3.new(1,1,1)
+    E.Ten.Font = Enum.Font.GothamBold
+    E.Ten.TextSize = 14
+    E.Ten.TextStrokeTransparency = 0
+    E.Ten.TextStrokeColor3 = Color3.new(0,0,0)
+    E.Ten.Parent = Gui
     E.Thanh = Instance.new("Frame")
-    E.Thanh.Size = UDim2.new(0,80,0,6) E.Thanh.BackgroundColor3 = Color3.new(0.2,0.2,0.2)
-    E.Thanh.BorderSizePixel = 1 E.Thanh.BorderColor3 = Color3.new(1,1,1) E.Thanh.Parent = Gui
+    E.Thanh.Size = UDim2.new(0,80,0,6)
+    E.Thanh.BackgroundColor3 = Color3.new(0.2,0.2,0.2)
+    E.Thanh.BorderSizePixel = 1
+    E.Thanh.BorderColor3 = Color3.new(1,1,1)
+    E.Thanh.Parent = Gui
     E.Mau = Instance.new("Frame")
-    E.Mau.BackgroundColor3 = Color3.new(0,1,0) E.Mau.Size = UDim2.new(1,0,1,0) E.Mau.Parent = E.Thanh
+    E.Mau.BackgroundColor3 = Color3.new(0,1,0)
+    E.Mau.Size = UDim2.new(1,0,1,0)
+    E.Mau.Parent = E.Thanh
     E.So = Instance.new("TextLabel")
-    E.So.BackgroundTransparency = 1 E.So.TextColor3 = Color3.new(1,1,0)
-    E.So.Font = Enum.Font.GothamBold E.So.TextSize = 12 E.So.TextStrokeTransparency = 0 E.So.Parent = Gui
+    E.So.BackgroundTransparency = 1
+    E.So.TextColor3 = Color3.new(1,1,0)
+    E.So.Font = Enum.Font.GothamBold
+    E.So.TextSize = 12
+    E.So.TextStrokeTransparency = 0
+    E.So.Parent = Gui
     ESP_Container[Nguoi] = E
 end
 
-for _, N in next, Players:GetPlayers() do if N ~= Me and N.Character then task.spawn(TaoESP,N,N.Character) end end
-Players.PlayerAdded:Connect(function(N) N.CharacterAdded:Connect(function(C) task.wait(0.05) TaoESP(N,C) end) end)
+-- === TẠO NGAY TẤT CẢ NGƯỜI ĐANG CÓ ===
+for _, N in next, Players:GetPlayers() do
+    if N ~= Me and N.Character then task.spawn(TaoESP, N, N.Character) end
+end
+
+-- === TỰ ĐỘNG KHI NGƯỜI MỚI VÀO ===
+Players.PlayerAdded:Connect(function(N)
+    N.CharacterAdded:Connect(function(C)
+        task.wait(0.1)
+        TaoESP(N, C)
+    end)
+end)
+
+-- === TỰ ĐỘNG KHI NGƯỜI HỒI SINH ===
+Players.PlayerRemoving:Connect(function(N)
+    if ESP_Container[N] then
+        for _,v in pairs(ESP_Container[N]) do pcall(function() v:Destroy() end) end
+        ESP_Container[N] = nil
+    end
+end)
+
+-- === KIỂM TRA ĐỊNH KỲ - KHÔNG BỎ SÓT AI ===
+task.spawn(function()
+    while task.wait(1) do
+        for _, N in next, Players:GetPlayers() do
+            if N ~= Me and N.Character and not ESP_Container[N] then
+                task.spawn(TaoESP, N, N.Character)
+            end
+        end
+    end
+end)
 
 RunService.RenderStepped:Connect(function(dt)
     local M = os.clock()%1
@@ -120,15 +172,14 @@ RunService.RenderStepped:Connect(function(dt)
     for _,E in pairs(ESP_Container) do if E and E.HL then E.HL.OutlineColor=Color3.new(R,G,B) end end
 
     if not Me.Character or not C.Xoay or not Tar then return end
-    local D = Tar:FindFirstChild("Humanoid") local P = Tar:FindFirstChild("HumanoidRootPart")
+    local D = Tar:FindFirstChild("Humanoid")
+    local P = Tar:FindFirstChild("HumanoidRootPart")
     if not D or not P or D.Health<=0 or not Tar:IsDescendantOf(workspace) then
         C.Xoay = false
         NutXoay.BackgroundColor3 = Color3.new(0.3,0.3,0.3)
         NutXoay.Text = "🌀 Bật xoay"
         ChongBat(false)
         KhoiPhuc()
-        Tar = nil
-        if TrangThai then TrangThai.Text = "🎯 Chưa chọn" end
         return
     end
     if not CamLuu then CamLuu,CamTypeLuu=Cam.CameraSubject,Cam.CameraType end
@@ -136,11 +187,13 @@ RunService.RenderStepped:Connect(function(dt)
     Ang=(Ang+C.TocDo*math.min(dt,0.03))%(math.pi*2)
     local Cx,Sy=math.cos(Ang),math.sin(Ang)
     Me.Character.HumanoidRootPart.CFrame=CFrame.new(P.Position+Vector3.new(Cx*C.BanKinh,C.Cao,Sy*C.BanKinh),P.Position)
-    Me.Character.Humanoid.GravityScale=0 Me.Character.Humanoid.PlatformStand=true
+    Me.Character.Humanoid.GravityScale=0
+    Me.Character.Humanoid.PlatformStand=true
 
     for Nguoi,E in pairs(ESP_Container) do
         if not Nguoi or not Nguoi.Character or not E then continue end
-        local H=Nguoi.Character:FindFirstChild("Humanoid") local R=Nguoi.Character:FindFirstChild("HumanoidRootPart")
+        local H=Nguoi.Character:FindFirstChild("Humanoid")
+        local R=Nguoi.Character:FindFirstChild("HumanoidRootPart")
         if not H or not R then continue end
         local Pos,Vis=Cam:WorldToViewportPoint(R.Position+Vector3.new(0,2.5,0))
         if Vis then
@@ -157,20 +210,37 @@ end)
 
 -- === GIAO DIỆN ===
 local NutAn = Instance.new("TextButton")
-NutAn.Size=UDim2.new(0,70,0,30) NutAn.Position=UDim2.new(0.01,0,0.01,0)
-NutAn.BackgroundColor3=Color3.new(0.15,0.4,0.8) NutAn.Text="🔽 ẨN"
-NutAn.TextColor3=Color3.new(1,1,1) NutAn.Font=Enum.Font.GothamBold NutAn.TextSize=12 NutAn.Parent=Gui
+NutAn.Size=UDim2.new(0,70,0,30)
+NutAn.Position=UDim2.new(0.01,0,0.01,0)
+NutAn.BackgroundColor3=Color3.new(0.15,0.4,0.8)
+NutAn.Text="🔽 ẨN"
+NutAn.TextColor3=Color3.new(1,1,1)
+NutAn.Font=Enum.Font.GothamBold
+NutAn.TextSize=12
+NutAn.Parent=Gui
 
 local Win=Instance.new("Frame")
-Win.Size=UDim2.new(0,290,0,560) Win.Position=UDim2.new(0.5,-145,0.1,0)
-Win.BackgroundColor3=Color3.new(0.08,0.08,0.15) Win.BorderSizePixel=2 Win.BorderColor3=Color3.new(0.3,0.4,0.8) Win.Parent=Gui
+Win.Size=UDim2.new(0,290,0,560)
+Win.Position=UDim2.new(0.5,-145,0.1,0)
+Win.BackgroundColor3=Color3.new(0.08,0.08,0.15)
+Win.BorderSizePixel=2
+Win.BorderColor3=Color3.new(0.3,0.4,0.8)
+Win.Parent=Gui
 
 local Title=Instance.new("TextLabel")
-Title.Size=UDim2.new(1,0,0,35) Title.BackgroundColor3=Color3.new(0.2,0.3,0.7)
-Title.Text="🌈 VISION5" Title.TextColor3=Color3.new(1,1,1)
-Title.Font=Enum.Font.GothamBold Title.TextSize=15 Title.Parent=Win
+Title.Size=UDim2.new(1,0,0,35)
+Title.BackgroundColor3=Color3.new(0.2,0.3,0.7)
+Title.Text="🌈 VISION5"
+Title.TextColor3=Color3.new(1,1,1)
+Title.Font=Enum.Font.GothamBold
+Title.TextSize=15
+Title.Parent=Win
 
-local Khung=Instance.new("Frame") Khung.Size=UDim2.new(1,-10,1,-50) Khung.Position=UDim2.new(0,5,0,40) Khung.BackgroundTransparency=1 Khung.Parent=Win
+local Khung=Instance.new("Frame")
+Khung.Size=UDim2.new(1,-10,1,-50)
+Khung.Position=UDim2.new(0,5,0,40)
+Khung.BackgroundTransparency=1
+Khung.Parent=Win
 
 local function Keo(Obj)
     local DangKeo, LechX, LechY = false, 0, 0
@@ -192,7 +262,7 @@ Keo(Win)
 
 NutAn.MouseButton1Click:Connect(function() Hien=not Hien Win.Visible=Hien NutAn.Text=Hien and "🔽 ẨN" or "🔼 HIỆN" end)
 
--- Ô NHẬP TÊN
+-- Ô nhập tên
 local Tk=Instance.new("Frame") Tk.Size=UDim2.new(1,0,0,35) Tk.BackgroundTransparency=1 Tk.Parent=Khung
 local InTen=Instance.new("TextBox") InTen.Size=UDim2.new(0.7,-5,1,0) InTen.BackgroundColor3=Color3.new(0.15,0.35,0.6)
 InTen.Text="🔍 Tên..." InTen.TextColor3=Color3.new(1,1,1) InTen.Font=Enum.Font.Gotham InTen.TextSize=13 InTen.Parent=Tk
@@ -202,18 +272,14 @@ OkTen.Font=Enum.Font.GothamBold OkTen.TextSize=13 OkTen.Parent=Tk
 local function XuLyTen()
     if not InTen.Text or InTen.Text == "" then return end
     local Kq=LayTheoTen(InTen.Text)
-    if Kq then
-        InTen.Text = "✅ OK"
-    else
-        InTen.Text = "❌ Không"
-        Tar = nil
-        if TrangThai then TrangThai.Text = "🎯 Chưa chọn" end
-    end
+    if Kq then InTen.Text = "✅ OK"
+    else InTen.Text = "❌ Không" Tar = nil if TrangThai then TrangThai.Text = "🎯 Chưa chọn" end end
     task.wait(1) InTen.Text = "🔍 Tên..."
 end
-OkTen.MouseButton1Click:Connect(XuLyTen) InTen.FocusLost:Connect(function(e) if e then XuLyTen() end end)
+OkTen.MouseButton1Click:Connect(XuLyTen)
+InTen.FocusLost:Connect(function(e) if e then XuLyTen() end end)
 
--- ✅ Ô NHẬP TỐC ĐỘ ĐÃ SỬA - NHẬP LÀ NHẬN NGAY
+-- Ô nhập tốc độ
 local Toc=Instance.new("Frame") Toc.Size=UDim2.new(1,0,0,35) Toc.Position=UDim2.new(0,0,0,42) Toc.BackgroundTransparency=1 Toc.Parent=Khung
 local InToc=Instance.new("TextBox") InToc.Size=UDim2.new(0.7,-5,1,0) InToc.BackgroundColor3=Color3.new(0.15,0.35,0.6)
 InToc.Text="⚡ Tốc độ: "..C.TocDo InToc.TextColor3=Color3.new(1,1,1) InToc.Font=Enum.Font.Gotham InToc.TextSize=13 InToc.Parent=Toc
@@ -223,25 +289,19 @@ OkToc.Font=Enum.Font.GothamBold OkToc.TextSize=13 OkToc.Parent=Toc
 local function XuLyToc()
     local ChuoiSo = string.gsub(InToc.Text, "[^0-9.]", "")
     local So = tonumber(ChuoiSo)
-    if So and So > 0 then
-        C.TocDo = So
-        InToc.Text = "⚡ Tốc độ: "..tostring(C.TocDo)
-    else
-        InToc.Text = "❌ Sai"
-        task.wait(1)
-        InToc.Text = "⚡ Tốc độ: "..tostring(C.TocDo)
-    end
+    if So and So > 0 then C.TocDo = So InToc.Text = "⚡ Tốc độ: "..tostring(C.TocDo)
+    else InToc.Text = "❌ Sai" task.wait(1) InToc.Text = "⚡ Tốc độ: "..tostring(C.TocDo) end
 end
 OkToc.MouseButton1Click:Connect(XuLyToc)
 InToc.FocusLost:Connect(function(e) if e then XuLyToc() end end)
 
--- NÚT CHỌN GẦN NHẤT
+-- Nút chọn gần nhất
 local NutGan=Instance.new("TextButton") NutGan.Size=UDim2.new(1,0,0,35) NutGan.Position=UDim2.new(0,0,0,82)
 NutGan.BackgroundColor3=Color3.new(0.2,0.5,0.9) NutGan.Text="🎯 Gần nhất"
 NutGan.TextColor3=Color3.new(1,1,1) NutGan.Font=Enum.Font.GothamBold NutGan.TextSize=14 NutGan.Parent=Khung
 NutGan.MouseButton1Click:Connect(function() Lay() end)
 
--- NÚT BẬT/TẮT XOAY
+-- Nút bật/tắt xoay
 NutXoay=Instance.new("TextButton") NutXoay.Size=UDim2.new(1,0,0,35) NutXoay.Position=UDim2.new(0,0,0,122)
 NutXoay.BackgroundColor3=Color3.new(0.3,0.3,0.3) NutXoay.Text="🌀 Bật xoay"
 NutXoay.TextColor3=Color3.new(1,1,1) NutXoay.Font=Enum.Font.GothamBold NutXoay.TextSize=14 NutXoay.Parent=Khung
@@ -261,7 +321,7 @@ NutXoay.MouseButton1Click:Connect(function()
     end
 end)
 
--- THANH TRƯỢT
+-- Thanh trượt
 local function Thanh(Ten,Min,Max,MacDinh,Khoa,ViTri)
     local Lb=Instance.new("TextLabel") Lb.Size=UDim2.new(1,0,0,20) Lb.Position=UDim2.new(0,0,0,ViTri) Lb.BackgroundTransparency=1
     Lb.Text=Ten..": "..MacDinh Lb.TextColor3=Color3.new(0.9,0.9,0.9) Lb.Font=Enum.Font.Gotham Lb.TextSize=13 Lb.Parent=Khung
