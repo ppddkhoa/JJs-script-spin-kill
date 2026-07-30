@@ -1,4 +1,4 @@
---// === VISION4 - SỬA LỖI MẤT GUI - KHÔNG LẮC ===
+--// === VISION5 - SỬA HOÀN TOÀN Ô NHẬP + NÚT OK ===
 local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
 local Me,Cam = Players.LocalPlayer,workspace.CurrentCamera
 local Tar,Ang,Hien = nil,0,true
@@ -6,7 +6,6 @@ local CamLuu,CamTypeLuu = nil,nil
 local C = {Xoay=false,Vung=20,BanKinh=9,TocDo=3.5,Cao=4}
 local KhongSatThuong = nil
 
--- Tìm mục tiêu
 local function Lay()
     local M = Me.Character
     if not M or not M:FindFirstChild("HumanoidRootPart") then return nil end
@@ -25,7 +24,6 @@ local function Lay()
     return Best
 end
 
--- Chống sát thương
 local function ChongSatThuong(Bat)
     local M = Me.Character
     if not M or not M:FindFirstChild("Humanoid") then return end
@@ -43,7 +41,6 @@ local function ChongSatThuong(Bat)
     end
 end
 
--- Khôi phục camera
 local function KhoiPhuc()
     if CamLuu then
         Cam.CameraSubject = CamLuu
@@ -56,7 +53,6 @@ local function KhoiPhuc()
     end
 end
 
--- Vòng lặp chính
 Run.RenderStepped:Connect(function(dt)
     local M = Me.Character
     if not M or not M:FindFirstChild("HumanoidRootPart") then return end
@@ -77,14 +73,13 @@ Run.RenderStepped:Connect(function(dt)
     M.Humanoid.PlatformStand = true
 end)
 
--- === GIAO DIỆN ĐƯỢC SỬA - KHÔNG MẤT, LUÔN HIỆN ===
+-- === GIAO DIỆN ===
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "Vision4_Fixed"
+Gui.Name = "Vision5_FinalFixed"
 Gui.ResetOnSpawn = false
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = game.CoreGui
 
--- Nút ẩn/hiện luôn ở trên cùng
 local NutAnHien = Instance.new("TextButton")
 NutAnHien.Size = UDim2.fromOffset(70,30)
 NutAnHien.Position = UDim2.new(0.01,0,0.01,0)
@@ -93,29 +88,25 @@ NutAnHien.Text = "🔽 ẨN GUI"
 NutAnHien.TextColor3 = Color3.new(1,1,1)
 NutAnHien.Font = Enum.Font.GothamBold
 NutAnHien.TextSize = 12
-NutAnHien.ZIndex = 100
 NutAnHien.Parent = Gui
 
--- Khung chính
 local Win = Instance.new("Frame")
-Win.Size = UDim2.fromOffset(290,480)
-Win.Position = UDim2.new(0.5,-145,0.18,0)
+Win.Size = UDim2.fromOffset(290,520)
+Win.Position = UDim2.new(0.5,-145,0.15,0)
 Win.BackgroundColor3 = Color3.new(0.08,0.08,0.15)
 Win.BorderSizePixel = 2
 Win.BorderColor3 = Color3.new(0.3,0.4,0.8)
-Win.ZIndex = 50
 Win.Parent = Gui
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0,35)
 Title.BackgroundColor3 = Color3.new(0.2,0.3,0.7)
-Title.Text = "✅ VISION4 - ĐÃ SỬA MẤT GUI"
+Title.Text = "✅ VISION5 - ĐÃ SỬA HẾT"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
 Title.Parent = Win
 
--- Kéo được
 local Drag,a,b=false,nil,nil
 Win.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then Drag,a,b=true,i.Position,Win.Position end end)
 UI.InputChanged:Connect(function(i) if Drag then Win.Position=UDim2.new(b.X.Scale,b.X.Offset+(i.Position-a).X,b.Y.Scale,b.Y.Offset+(i.Position-a).Y) end end)
@@ -129,7 +120,6 @@ NoiDung.Position = UDim2.new(0,5,0,40)
 NoiDung.BackgroundTransparency = 1
 NoiDung.Parent = Win
 
--- Nút chọn mục tiêu
 local NutChon = Instance.new("TextButton")
 NutChon.Size = UDim2.new(1,0,0,35)
 NutChon.Position = UDim2.new(0,0,0,0)
@@ -141,7 +131,6 @@ NutChon.TextSize = 14
 NutChon.Parent = NoiDung
 NutChon.MouseButton1Click:Connect(function() Tar=Lay() end)
 
--- Nút bật/tắt xoay
 local NutXoay = Instance.new("TextButton")
 NutXoay.Size = UDim2.new(1,0,0,35)
 NutXoay.Position = UDim2.new(0,0,0,42)
@@ -165,7 +154,51 @@ NutXoay.MouseButton1Click:Connect(function()
     end
 end)
 
--- Thanh trượt
+-- === Ô NHẬP + NÚT OK - VIẾT LẠI TỪ ĐẦU ===
+local KhungNhap = Instance.new("Frame")
+KhungNhap.Size = UDim2.new(1,0,0,35)
+KhungNhap.Position = UDim2.new(0,0,0,84)
+KhungNhap.BackgroundTransparency = 1
+KhungNhap.Parent = NoiDung
+
+local NhanTocDo = Instance.new("TextBox")
+NhanTocDo.Size = UDim2.new(0.75,-5,1,0)
+NhanTocDo.Position = UDim2.new(0,0,0,0)
+NhanTocDo.BackgroundColor3 = Color3.new(0.15,0.35,0.6)
+NhanTocDo.Text = "⚡ Tốc độ: "..C.TocDo
+NhanTocDo.TextColor3 = Color3.new(1,1,1)
+NhanTocDo.Font = Enum.Font.Gotham
+NhanTocDo.TextSize = 13
+NhanTocDo.TextXAlignment = Enum.TextXAlignment.Center
+NhanTocDo.ClearTextOnFocus = false
+NhanTocDo.Parent = KhungNhap
+
+local NutOk = Instance.new("TextButton")
+NutOk.Size = UDim2.new(0.25,-5,1,0)
+NutOk.Position = UDim2.new(0.75,5,0,0)
+NutOk.BackgroundColor3 = Color3.new(0,0.8,0.2)
+NutOk.Text = "✅ OK"
+NutOk.TextColor3 = Color3.new(1,1,1)
+NutOk.Font = Enum.Font.GothamBold
+NutOk.TextSize = 13
+NutOk.Parent = KhungNhap
+
+-- === HÀM CẬP NHẬT ĐƠN GIẢN NHẤT - CHẮC CHẮN CHẠY ===
+local function CapNhatTocDo()
+    local SoNhap = tonumber(NhanTocDo.Text)
+    if SoNhap and SoNhap >= 0.5 and SoNhap <= 2000000 then
+        C.TocDo = SoNhap
+        NhanTocDo.Text = "⚡ Tốc độ: "..SoNhap
+    else
+        NhanTocDo.Text = "⚡ Tốc độ: "..C.TocDo
+    end
+end
+
+-- === GÁN SỰ KIỆN ĐÚNG CÁCH ===
+NutOk.MouseButton1Click:Connect(CapNhatTocDo)
+NhanTocDo.FocusLost:Connect(function(enter) if enter then CapNhatTocDo() end end)
+
+-- Thanh trượt còn lại
 local function Thanh(txt,min,max,macdinh,k,y)
     local l=Instance.new("TextLabel") l.Size=UDim2.new(1,0,0,20) l.Position=UDim2.new(0,0,0,y) l.BackgroundTransparency=1 l.Text=txt..": "..macdinh l.TextColor3=Color3.new(0.9,0.9,0.9) l.Font=Enum.Font.Gotham l.TextSize=13 l.TextXAlignment=Enum.TextXAlignment.Left l.Parent=NoiDung
     local bar=Instance.new("TextButton") bar.Size=UDim2.new(1,0,0,18) bar.Position=UDim2.new(0,0,0,y+20) bar.BackgroundColor3=Color3.new(0.2,0.2,0.4) bar.Text="" bar.Parent=NoiDung
@@ -175,10 +208,9 @@ local function Thanh(txt,min,max,macdinh,k,y)
     UI.InputEnded:Connect(function() kc=false end)
 end
 
-Thanh("📏 Phạm vi tìm",1,30,20,"Vung",82)
-Thanh("⭕ Bán kính xoay",1,55,9,"BanKinh",125)
-Thanh("⚡ Tốc độ xoay",0.5,2000000,3.5,"TocDo",168)
-Thanh("📐 Độ cao",0,12,4,"Cao",211)
+Thanh("📏 Phạm vi tìm",1,30,20,"Vung",126)
+Thanh("⭕ Bán kính xoay",1,55,9,"BanKinh",169)
+Thanh("📐 Độ cao",0,12,4,"Cao",212)
 
-local Ten=Instance.new("TextLabel") Ten.Size=UDim2.new(1,0,0,35) Ten.Position=UDim2.new(0,0,0,254) Ten.BackgroundColor3=Color3.new(0.15,0.15,0.3) Ten.Text="🎯 CHƯA CÓ MỤC TIÊU" Ten.TextColor3=Color3.new(1,0.4,0.4) Ten.Font=Enum.Font.GothamBold Ten.TextSize=14 Ten.Parent=NoiDung
+local Ten=Instance.new("TextLabel") Ten.Size=UDim2.new(1,0,0,35) Ten.Position=UDim2.new(0,0,0,255) Ten.BackgroundColor3=Color3.new(0.15,0.15,0.3) Ten.Text="🎯 CHƯA CÓ MỤC TIÊU" Ten.TextColor3=Color3.new(1,0.4,0.4) Ten.Font=Enum.Font.GothamBold Ten.TextSize=14 Ten.Parent=NoiDung
 Run.Heartbeat:Connect(function() Ten.Text=Tar and"🎯 KHÓA: "..string.upper(Players:GetPlayerFromCharacter(Tar).Name)or"🎯 CHƯA CÓ MỤC TIÊU" end)
