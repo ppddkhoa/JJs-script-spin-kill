@@ -1,4 +1,4 @@
---// === VISION5 - SỬA HOÀN TOÀN Ô NHẬP + NÚT OK ===
+--// === VISION5 - SỬA CAMERA KHÔNG QUAY VỀ ===
 local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
 local Me,Cam = Players.LocalPlayer,workspace.CurrentCamera
 local Tar,Ang,Hien = nil,0,true
@@ -41,6 +41,7 @@ local function ChongSatThuong(Bat)
     end
 end
 
+-- === HÀM KHÔI PHỤC CAMERA - CHẠY NGAY KHI KHÔNG CÒN MỤC TIÊU ===
 local function KhoiPhuc()
     if CamLuu then
         Cam.CameraSubject = CamLuu
@@ -53,14 +54,37 @@ local function KhoiPhuc()
     end
 end
 
+-- === VÒNG LẶP CHÍNH - KIỂMTRA MỤC TIÊU LIÊN TỤC ===
 Run.RenderStepped:Connect(function(dt)
     local M = Me.Character
-    if not M or not M:FindFirstChild("HumanoidRootPart") then return end
-    local MR = M.HumanoidRootPart
-    if not C.Xoay or not Tar then KhoiPhuc() return end
-    local HM = Tar:FindFirstChild("Humanoid")
+    if not M or not M:FindFirstChild("HumanoidRootPart") then 
+        Tar=nil
+        KhoiPhuc()
+        return 
+    end
+
+    -- Kiểm tra nếu mục tiêu chết/mất → tự hủy và quay về
+    if Tar then
+        local HM = Tar:FindFirstChild("Humanoid")
+        if not HM or HM.Health<=0 or not Tar:IsDescendantOf(workspace) then
+            Tar=nil
+            KhoiPhuc()
+            return
+        end
+    end
+
+    if not C.Xoay or not Tar then 
+        KhoiPhuc()
+        return 
+    end
+
     local HR = Tar:FindFirstChild("HumanoidRootPart")
-    if not HM or not HR or HM.Health<=0 then Tar=nil KhoiPhuc() return end
+    if not HR then 
+        Tar=nil
+        KhoiPhuc()
+        return 
+    end
+
     if not CamLuu then CamLuu,CamTypeLuu = Cam.CameraSubject,Cam.CameraType end
     Cam.CameraSubject = HR
     Cam.CameraType = Enum.CameraType.Follow
@@ -68,14 +92,14 @@ Run.RenderStepped:Connect(function(dt)
     Ang = (Ang + Buoc) % (math.pi * 2)
     local Cos,Sin = math.cos(Ang), math.sin(Ang)
     local Off = Vector3.new(Cos*C.BanKinh, C.Cao, Sin*C.BanKinh)
-    MR.CFrame = CFrame.new(HR.Position + Off, HR.Position)
+    M.HumanoidRootPart.CFrame = CFrame.new(HR.Position + Off, HR.Position)
     M.Humanoid.GravityScale = 0
     M.Humanoid.PlatformStand = true
 end)
 
 -- === GIAO DIỆN ===
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "Vision5_FinalFixed"
+Gui.Name = "Vision5_CameraFixed"
 Gui.ResetOnSpawn = false
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = game.CoreGui
@@ -101,7 +125,7 @@ Win.Parent = Gui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0,35)
 Title.BackgroundColor3 = Color3.new(0.2,0.3,0.7)
-Title.Text = "✅ VISION5 - ĐÃ SỬA HẾT"
+Title.Text = "✅ VISION5 - SỬA CAMERA"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
@@ -154,7 +178,7 @@ NutXoay.MouseButton1Click:Connect(function()
     end
 end)
 
--- === Ô NHẬP + NÚT OK - VIẾT LẠI TỪ ĐẦU ===
+-- Ô nhập + nút OK
 local KhungNhap = Instance.new("Frame")
 KhungNhap.Size = UDim2.new(1,0,0,35)
 KhungNhap.Position = UDim2.new(0,0,0,84)
@@ -183,7 +207,6 @@ NutOk.Font = Enum.Font.GothamBold
 NutOk.TextSize = 13
 NutOk.Parent = KhungNhap
 
--- === HÀM CẬP NHẬT ĐƠN GIẢN NHẤT - CHẮC CHẮN CHẠY ===
 local function CapNhatTocDo()
     local SoNhap = tonumber(NhanTocDo.Text)
     if SoNhap and SoNhap >= 0.5 and SoNhap <= 2000000 then
@@ -193,12 +216,10 @@ local function CapNhatTocDo()
         NhanTocDo.Text = "⚡ Tốc độ: "..C.TocDo
     end
 end
-
--- === GÁN SỰ KIỆN ĐÚNG CÁCH ===
 NutOk.MouseButton1Click:Connect(CapNhatTocDo)
-NhanTocDo.FocusLost:Connect(function(enter) if enter then CapNhatTocDo() end end)
+NhanTocDo.FocusLost:Connect(function(e) if e then CapNhatTocDo() end end)
 
--- Thanh trượt còn lại
+-- Thanh trượt
 local function Thanh(txt,min,max,macdinh,k,y)
     local l=Instance.new("TextLabel") l.Size=UDim2.new(1,0,0,20) l.Position=UDim2.new(0,0,0,y) l.BackgroundTransparency=1 l.Text=txt..": "..macdinh l.TextColor3=Color3.new(0.9,0.9,0.9) l.Font=Enum.Font.Gotham l.TextSize=13 l.TextXAlignment=Enum.TextXAlignment.Left l.Parent=NoiDung
     local bar=Instance.new("TextButton") bar.Size=UDim2.new(1,0,0,18) bar.Position=UDim2.new(0,0,0,y+20) bar.BackgroundColor3=Color3.new(0.2,0.2,0.4) bar.Text="" bar.Parent=NoiDung
