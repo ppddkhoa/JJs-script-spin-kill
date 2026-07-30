@@ -1,12 +1,11 @@
---// === SỬA LỖI KHÔNG QUAY VỀ CAMERA - HOÀN CHỈNH ===
+--// === VISON3 - KHÔNG LẮC KHI XOAY NHANH ===
 local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
 local Me,Cam = Players.LocalPlayer,workspace.CurrentCamera
 local Tar,Ang,Hien = nil,0,true
-local CamLuu,CamTypeLuu,CamSubLuu = nil,nil,nil -- LƯU ĐẦY ĐỦ TRẠNG THÁI CŨ
+local CamLuu,CamTypeLuu = nil,nil
 local C = {Xoay=false,Vung=20,BanKinh=9,TocDo=3.5,Cao=4}
 local KhongSatThuong = nil
 
--- Tìm mục tiêu
 local function Lay()
     local M = Me.Character
     if not M or not M:FindFirstChild("HumanoidRootPart") then return nil end
@@ -25,7 +24,6 @@ local function Lay()
     return Best
 end
 
--- Chống sát thương
 local function ChongSatThuong(Bat)
     local M = Me.Character
     if not M or not M:FindFirstChild("Humanoid") then return end
@@ -43,12 +41,11 @@ local function ChongSatThuong(Bat)
     end
 end
 
--- === KHÔI PHỤC CAMERA HOÀN TOÀN ===
-local function KhoiPhucCamera()
+local function KhoiPhuc()
     if CamLuu then
         Cam.CameraSubject = CamLuu
         Cam.CameraType = CamTypeLuu
-        CamLuu,CamTypeLuu,CamSubLuu = nil,nil,nil
+        CamLuu,CamTypeLuu = nil,nil
     end
     if Me.Character and Me.Character:FindFirstChild("Humanoid") then
         Me.Character.Humanoid.GravityScale = 1
@@ -56,38 +53,28 @@ local function KhoiPhucCamera()
     end
 end
 
--- Vòng lặp chính
+-- === TỐI ƯU KHÔNG LẮC ===
 Run.RenderStepped:Connect(function(dt)
     local M = Me.Character
     if not M or not M:FindFirstChild("HumanoidRootPart") then return end
     local MR = M.HumanoidRootPart
 
-    -- TẮT XOAY → KHÔI PHỤC NGAY LẬP TỨC
-    if not C.Xoay or not Tar then
-        KhoiPhucCamera()
-        return
-    end
+    if not C.Xoay or not Tar then KhoiPhuc() return end
 
-    -- KIỂM TRA MỤC TIÊU
     local HM = Tar:FindFirstChild("Humanoid")
     local HR = Tar:FindFirstChild("HumanoidRootPart")
-    if not HM or not HR or HM.Health<=0 then
-        Tar = nil
-        KhoiPhucCamera()
-        return
-    end
+    if not HM or not HR or HM.Health<=0 then Tar=nil KhoiPhuc() return end
 
-    -- BẬT XOAY → LƯU CAMERA CŨ + CHUYỂN THEO ĐỊCH
-    if not CamLuu then
-        CamLuu = Cam.CameraSubject
-        CamTypeLuu = Cam.CameraType
-    end
+    if not CamLuu then CamLuu,CamTypeLuu = Cam.CameraSubject,Cam.CameraType end
     Cam.CameraSubject = HR
     Cam.CameraType = Enum.CameraType.Follow
 
-    -- Xoay vòng
-    Ang += C.TocDo * dt
-    MR.CFrame = CFrame.new(HR.Position + Vector3.new(math.cos(Ang)*C.BanKinh,C.Cao,math.sin(Ang)*C.BanKinh), HR.Position)
+    -- Giới hạn bước thời gian + chuẩn hóa góc → KHÔNG LẮC
+    local Bước = C.TocDo * math.min(dt, 0.03)
+    Ang = (Ang + Bước) % (math.pi * 2) -- Giữ góc trong khoảng 0→2π không bị tràn
+    local Cos,Sin = math.cos(Ang), math.sin(Ang) -- Tính 1 lần dùng 2 lần
+    local Off = Vector3.new(Cos*C.BanKinh, C.Cao, Sin*C.BanKinh)
+    MR.CFrame = CFrame.new(HR.Position + Off, HR.Position)
     M.Humanoid.GravityScale = 0
     M.Humanoid.PlatformStand = true
 end)
@@ -97,7 +84,7 @@ local Gui = Instance.new("ScreenGui") Gui.ResetOnSpawn=false Gui.Parent=game.Cor
 local NutAnHien = Instance.new("TextButton") NutAnHien.Size=UDim2.fromOffset(65,28) NutAnHien.Position=UDim2.new(0.01,0,0.01,0) NutAnHien.BackgroundColor3=Color3.new(0.2,0.2,0.5) NutAnHien.Text="🔽 ẨN" NutAnHien.TextColor3=Color3.new(1,1,1) NutAnHien.Font=Enum.Font.GothamBold NutAnHien.TextSize=12 NutAnHien.Parent=Gui
 
 local Win = Instance.new("Frame") Win.Size=UDim2.fromOffset(280,460) Win.Position=UDim2.new(0.5,-140,0.2,0) Win.BackgroundColor3=Color3.new(0.1,0.1,0.15) Win.BorderSizePixel=2 Win.BorderColor3=Color3.new(0.3,0.3,0.6) Win.Parent=Gui
-local Title = Instance.new("TextLabel") Title.Size=UDim2.new(1,0,0,32) Title.BackgroundColor3=Color3.new(0.2,0.2,0.5) Title.Text="✅ SỬA LỖI CAMERA" Title.TextColor3=Color3.new(1,1,1) Title.Font=Enum.Font.GothamBold Title.TextSize=15 Title.Parent=Win
+local Title = Instance.new("TextLabel") Title.Size=UDim2.new(1,0,0,32) Title.BackgroundColor3=Color3.new(0.2,0.2,0.5) Title.Text="✅ KHÔNG LẮC - TỐI ƯU" Title.TextColor3=Color3.new(1,1,1) Title.Font=Enum.Font.GothamBold Title.TextSize=15 Title.Parent=Win
 local Drag,a,b=false,nil,nil
 Win.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then Drag,a,b=true,i.Position,Win.Position end end)
 UI.InputChanged:Connect(function(i) if Drag then Win.Position=UDim2.new(b.X.Scale,b.X.Offset+(i.Position-a).X,b.Y.Scale,b.Y.Offset+(i.Position-a).Y) end end)
@@ -114,13 +101,13 @@ NutXoay.MouseButton1Click:Connect(function()
     C.Xoay = not C.Xoay
     if C.Xoay then
         NutXoay.BackgroundColor3 = Color3.new(0.2,0.6,0.2)
-        NutXoay.Text = "🟢 ĐANG XOAY - CAMERA THEO ĐỊCH"
+        NutXoay.Text = "🟢 ĐANG XOAY"
         ChongSatThuong(true)
     else
         NutXoay.BackgroundColor3 = Color3.new(0.3,0.3,0.3)
-        NutXoay.Text = "🔴 ĐÃ DỪNG - CAMERA QUAY VỀ"
+        NutXoay.Text = "🔴 ĐÃ DỪNG"
         ChongSatThuong(false)
-        KhoiPhucCamera()
+        KhoiPhuc()
     end
 end)
 
@@ -129,14 +116,23 @@ local function Thanh(txt,min,max,macdinh,k,y)
     local bar=Instance.new("TextButton") bar.Size=UDim2.new(1,0,0,16) bar.Position=UDim2.new(0,0,0,y+20) bar.BackgroundColor3=Color3.new(0.2,0.2,0.4) bar.Text="" bar.Parent=NoiDung
     local n=Instance.new("Frame") n.Size=UDim2.new(0,14,1,0) n.BackgroundColor3=Color3.new(0.3,0.7,1) n.Parent=bar local kc=false
     bar.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then kc=true end end)
-    UI.InputChanged:Connect(function(i) if kc then local x=math.clamp((i.Position.X-bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1) local gt=min+(max-min)*x;gt=math.floor(min)==min and math.floor(gt) or tonumber(string.format("%.1f",gt)) C[k]=gt n.Position=UDim2.new(x,-7,0,0) l.Text=txt..": "..gt end end)
+    UI.InputChanged:Connect(function(i)
+        if kc then
+            local x=math.clamp((i.Position.X-bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+            local gt=min+(max-min)*x
+            gt=math.floor(min)==min and math.floor(gt) or tonumber(string.format("%.1f",gt))
+            C[k]=gt
+            n.Position=UDim2.new(x,-7,0,0)
+            l.Text=txt..": "..gt
+        end
+    end)
     UI.InputEnded:Connect(function() kc=false end)
 end
 
 Thanh("📏 Phạm vi tìm",1,30,20,"Vung",76)
-Thanh("⭕ Bán kính xoay",3,25,9,"BanKinh",116)
-Thanh("⚡ Tốc độ xoay",0.5,8,3.5,"TocDo",156)
-Thanh("📐 Độ cao",1,12,4,"Cao",196)
+Thanh("⭕ Bán kính xoay",1,55,9,"BanKinh",116)
+Thanh("⚡ Tốc độ xoay",0.5,2000000,3.5,"TocDo",156)
+Thanh("📐 Độ cao",0,12,4,"Cao",196)
 
 local Ten=Instance.new("TextLabel") Ten.Size=UDim2.new(1,0,0,32) Ten.Position=UDim2.new(0,0,0,236) Ten.BackgroundColor3=Color3.new(0.15,0.15,0.3) Ten.Text="🎯 CHƯA CÓ MỤC TIÊU" Ten.TextColor3=Color3.new(1,0.4,0.4) Ten.Font=Enum.Font.GothamBold Ten.TextSize=14 Ten.Parent=NoiDung
 Run.Heartbeat:Connect(function() Ten.Text=Tar and"🎯 KHÓA: "..string.upper(Players:GetPlayerFromCharacter(Tar).Name)or"🎯 CHƯA CÓ MỤC TIÊU" end)
