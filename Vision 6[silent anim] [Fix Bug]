@@ -1,0 +1,407 @@
+--// === VISION5 - SILENT AIM + DANH SÁCH + HOÀN CHỈNH ===
+local Players,Run,UI = game:GetService("Players"),game:GetService("RunService"),game:GetService("UserInputService")
+local Me,Cam = Players.LocalPlayer,workspace.CurrentCamera
+local Tar,Ang,Hien = nil,0,true
+local CamLuu,CamTypeLuu = nil,nil
+local C = {Xoay=false,BanKinh=9,TocDo=3.5,Cao=4,SilentAim=true}
+local KhongSatThuong = nil
+local ESP_Container = {}
+local ThoiGian = 0
+local ESP_Bat = true
+local DanhSachMo = false
+local DanhSachGui = nil
+
+-- === TẠO GUI CHÍNH ===
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "Vision5_Silent_Final"
+Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent = game.CoreGui
+
+-- === KHÔI PHỤC CAMERA KHÔNG KẸT ===
+local function KhoiPhuc()
+    if CamLuu and CamTypeLuu then
+        Cam.CameraSubject = CamLuu
+        Cam.CameraType = CamTypeLuu
+    else
+        if Me.Character and Me.Character:FindFirstChild("HumanoidRootPart") then
+            Cam.CameraSubject = Me.Character.HumanoidRootPart
+            Cam.CameraType = Enum.CameraType.Follow
+        end
+    end
+    CamLuu,CamTypeLuu = nil,nil
+    if Me.Character and Me.Character:FindFirstChild("Humanoid") then
+        local HM = Me.Character.Humanoid
+        HM.GravityScale = 1
+        HM.PlatformStand = false
+        HM:ChangeState(Enum.HumanoidStateType.Running)
+    end
+end
+
+-- Chống sát thương
+local function ChongSatThuong(Bat)
+    local M = Me.Character
+    if not M or not M:FindFirstChild("Humanoid") then return end
+    local HM = M.Humanoid
+    if Bat then
+        HM.FallDamagePerFoot = 0
+        HM.MaxHealth = math.huge
+        HM.Health = math.huge
+        KhongSatThuong = HM.HealthChanged:Connect(function() HM.Health = math.huge end)
+    else
+        if KhongSatThuong then KhongSatThuong:Disconnect() end
+        HM.FallDamagePerFoot = 0.25
+        HM.MaxHealth = 100
+        HM.Health = 100
+    end
+end
+
+-- Chuyển tọa độ
+local function ToScreen(pos)
+    local scr,ok = Cam:WorldToViewportPoint(pos)
+    return ok and Vector2.new(scr.X,scr.Y) or nil, scr.Z
+end
+
+-- Tạo ESP
+local function TaoESP(Nguoi,NhanVat)
+    if not Nguoi or not NhanVat or Nguoi == Me then return end
+    if ESP_Container[Nguoi] then
+        for _,v in pairs(ESP_Container[Nguoi]) do pcall(function() v:Destroy() end) end
+        ESP_Container[Nguoi] = nil
+    end
+    local HM = NhanVat:WaitForChild("Humanoid",3)
+    local HR = NhanVat:WaitForChild("HumanoidRootPart",3)
+    if not HM or not HR then return end
+
+    local ESP = {}
+    ESP.Highlight = Instance.new("Highlight")
+    ESP.Highlight.FillTransparency = 1
+    ESP.Highlight.OutlineTransparency = 0
+    ESP.Highlight.OutlineColor = Color3.fromHSV(0,1,1)
+    ESP.Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    ESP.Highlight.Adornee = NhanVat
+    ESP.Highlight.Parent = NhanVat
+
+    ESP.Ten = Instance.new("TextLabel")
+    ESP.Ten.BackgroundTransparency = 1
+    ESP.Ten.TextColor3 = Color3.new(1,1,1)
+    ESP.Ten.Font = Enum.Font.GothamBold
+    ESP.Ten.TextSize = 14
+    ESP.Ten.TextStrokeTransparency = 0
+    ESP.Ten.TextStrokeColor3 = Color3.new(0,0,0)
+    ESP.Ten.Parent = Gui
+
+    ESP.ThanhMau = Instance.new("Frame")
+    ESP.ThanhMau.Size = UDim2.new(0,80,0,6)
+    ESP.ThanhMau.BackgroundColor3 = Color3.new(0.2,0.2,0.2)
+    ESP.ThanhMau.BorderSizePixel = 1
+    ESP.ThanhMau.BorderColor3 = Color3.new(1,1,1)
+    ESP.ThanhMau.Parent = Gui
+    ESP.Mau = Instance.new("Frame")
+    ESP.Mau.BackgroundColor3 = Color3.new(0,1,0)
+    ESP.Mau.Size = UDim2.new(1,0,1,0)
+    ESP.Mau.Parent = ESP.ThanhMau
+
+    ESP.SoMau = Instance.new("TextLabel")
+    ESP.SoMau.BackgroundTransparency = 1
+    ESP.SoMau.TextColor3 = Color3.new(1,1,0)
+    ESP.SoMau.Font = Enum.Font.GothamBold
+    ESP.SoMau.TextSize = 12
+    ESP.SoMau.TextStrokeTransparency = 0
+    ESP.SoMau.TextStrokeColor3 = Color3.new(0,0,0)
+    ESP.SoMau.Parent = Gui
+
+    ESP_Container[Nguoi] = ESP
+end
+
+-- Tự động thêm người mới
+local function KhoiTaoNguoi(Nguoi)
+    if Nguoi == Me then return end
+    Nguoi.CharacterAdded:Connect(function(NhanVat) task.wait(0.15) if Gui then TaoESP(Nguoi,NhanVat) end end)
+    if Nguoi.Character then task.wait(0.15) TaoESP(Nguoi,Nguoi.Character) end
+end
+for _,Nguoi in next,Players:GetPlayers() do KhoiTaoNguoi(Nguoi) end
+Players.PlayerAdded:Connect(KhoiTaoNguoi)
+
+-- === TẠO DANH SÁCH CHỌN NGƯỜI ===
+local function MoDanhSach()
+    if DanhSachMo then return end
+    DanhSachMo = true
+    DanhSachGui = Instance.new("ScreenGui")
+    DanhSachGui.Parent = game.CoreGui
+    local Fr = Instance.new("Frame")
+    Fr.Size = UDim2.new(0,220,0,350)
+    Fr.Position = UDim2.new(0.75,-110,0.5,-175)
+    Fr.BackgroundColor3 = Color3.new(0.08,0.08,0.15)
+    Fr.BorderSizePixel = 2
+    Fr.BorderColor3 = Color3.new(0.3,0.4,0.8)
+    Fr.Parent = DanhSachGui
+    local Tua = Instance.new("TextLabel")
+    Tua.Size = UDim2.new(1,0,0,30)
+    Tua.BackgroundColor3 = Color3.new(0.2,0.3,0.7)
+    Tua.Text = "📋 CHỌN MỤC TIÊU"
+    Tua.TextColor3 = Color3.new(1,1,1)
+    Tua.Font = Enum.Font.GothamBold
+    Tua.TextSize = 14
+    Tua.Parent = Fr
+    local NoiDung = Instance.new("ScrollingFrame")
+    NoiDung.Size = UDim2.new(1,-10,1,-40)
+    NoiDung.Position = UDim2.new(0,5,0,35)
+    NoiDung.BackgroundTransparency = 1
+    NoiDung.ScrollBarThickness = 6
+    NoiDung.Parent = Fr
+    local NutDong = Instance.new("TextButton")
+    NutDong.Size = UDim2.new(1,0,0,25)
+    NutDong.Position = UDim2.new(0,0,1,-25)
+    NutDong.BackgroundColor3 = Color3.new(0.7,0.2,0.2)
+    NutDong.Text = "❌ ĐÓNG"
+    NutDong.TextColor3 = Color3.new(1,1,1)
+    NutDong.Font = Enum.Font.GothamBold
+    NutDong.TextSize = 12
+    NutDong.Parent = Fr
+    NutDong.MouseButton1Click:Connect(function() DanhSachGui:Destroy() DanhSachMo=false end)
+    -- Liệt kê người
+    for _,P in next,Players:GetPlayers() do
+        if P==Me then continue end
+        local Nut = Instance.new("TextButton")
+        Nut.Size = UDim2.new(1,0,0,28)
+        Nut.BackgroundColor3 = Color3.new(0.15,0.3,0.5)
+        Nut.Text = "👤 "..P.Name
+        Nut.TextColor3 = Color3.new(1,1,1)
+        Nut.Font = Enum.Font.Gotham
+        Nut.TextSize = 12
+        Nut.Parent = NoiDung
+        Nut.MouseButton1Click:Connect(function() Tar=P.Character DanhSachGui:Destroy() DanhSachMo=false end)
+    end
+end
+
+-- === VÒNG LẶP CHÍNH + SILENT AIM ===
+Run.RenderStepped:Connect(function(dt)
+    ThoiGian = (ThoiGian + dt*0.5) % 1
+    local MauCauVong = Color3.fromHSV(ThoiGian,1,1)
+
+    -- Cập nhật ESP
+    if ESP_Bat then
+        for Nguoi,ESP in pairs(ESP_Container) do
+            if ESP.Highlight then ESP.Highlight.OutlineColor = MauCauVong end
+            local NhanVat = Nguoi.Character
+            local HM = NhanVat and NhanVat:FindFirstChild("Humanoid")
+            local HR = NhanVat and NhanVat:FindFirstChild("HumanoidRootPart")
+            if not HM or not HR or HM.Health<=0 or not NhanVat:IsDescendantOf(workspace) then
+                for _,v in pairs(ESP) do pcall(function() v:Destroy() end) end
+                ESP_Container[Nguoi] = nil
+                continue
+            end
+            local VT,DoSau = ToScreen(HR.Position)
+            if VT and DoSau>0 then
+                local KichThuoc = math.clamp(2200/DoSau,40,180)
+                local TiLeMau = HM.Health/HM.MaxHealth
+                ESP.Ten.Position = UDim2.fromOffset(VT.X-40,VT.Y-KichThuoc*1.4)
+                ESP.Ten.Text = Nguoi.Name
+                ESP.ThanhMau.Position = UDim2.fromOffset(VT.X-40,VT.Y-KichThuoc*1.2)
+                ESP.Mau.Size = UDim2.new(TiLeMau,0,1,0)
+                ESP.Mau.BackgroundColor3 = TiLeMau>0.3 and Color3.new(0,1,0) or Color3.new(1,0,0)
+                ESP.SoMau.Position = UDim2.fromOffset(VT.X-30,VT.Y-KichThuoc*1.05)
+                ESP.SoMau.Text = math.floor(HM.Health).." / "..math.floor(HM.MaxHealth)
+                ESP.Highlight.Visible = true
+                ESP.Ten.Visible = true
+                ESP.ThanhMau.Visible = true
+                ESP.SoMau.Visible = true
+            end
+        end
+    else
+        for _,ESP in pairs(ESP_Container) do
+            if ESP.Highlight then ESP.Highlight.Visible = false end
+            if ESP.Ten then ESP.Ten.Visible = false end
+            if ESP.ThanhMau then ESP.ThanhMau.Visible = false end
+            if ESP.SoMau then ESP.SoMau.Visible = false end
+        end
+    end
+
+    -- Xoay + Silent Aim
+    local M = Me.Character
+    if not M or not M:FindFirstChild("HumanoidRootPart") then Tar=nil KhoiPhuc() return end
+    if Tar then
+        local HM = Tar:FindFirstChild("Humanoid")
+        local HR = Tar:FindFirstChild("HumanoidRootPart")
+        if not HM or HM.Health<=0 or not Tar:IsDescendantOf(workspace) then Tar=nil KhoiPhuc() return end
+        -- SILENT AIM: điều chỉnh tầm nhìn ngầm
+        if C.SilentAim and HR then
+            Cam.CFrame = CFrame.new(Cam.CFrame.Position, HR.Position)
+        end
+    end
+    if not C.Xoay or not Tar then return end
+    local HR = Tar:FindFirstChild("HumanoidRootPart")
+    if not HR then Tar=nil KhoiPhuc() return end
+    if not CamLuu then CamLuu,CamTypeLuu = Cam.CameraSubject,Cam.CameraType end
+    Cam.CameraSubject = HR
+    Cam.CameraType = Enum.CameraType.Follow
+    local Buoc = C.TocDo * math.min(dt,0.03)
+    Ang = (Ang + Buoc) % (math.pi*2)
+    local Cos,Sin = math.cos(Ang), math.sin(Ang)
+    local Off = Vector3.new(Cos*C.BanKinh,C.Cao,Sin*C.BanKinh)
+    M.HumanoidRootPart.CFrame = CFrame.new(HR.Position+Off,HR.Position)
+    M.Humanoid.GravityScale = 0
+    M.Humanoid.PlatformStand = true
+end)
+
+-- === GIAO DIỆN ĐẦY ĐỦ ===
+local NutAnHien = Instance.new("TextButton")
+NutAnHien.Size = UDim2.fromOffset(70,30)
+NutAnHien.Position = UDim2.new(0.01,0,0.01,0)
+NutAnHien.BackgroundColor3 = Color3.new(0.15,0.4,0.8)
+NutAnHien.Text = "🔽 ẨN GUI"
+NutAnHien.TextColor3 = Color3.new(1,1,1)
+NutAnHien.Font = Enum.Font.GothamBold
+NutAnHien.TextSize = 12
+NutAnHien.Parent = Gui
+
+local Win = Instance.new("Frame")
+Win.Size = UDim2.fromOffset(290,580)
+Win.Position = UDim2.new(0.5,-145,0.12,0)
+Win.BackgroundColor3 = Color3.new(0.08,0.08,0.15)
+Win.BorderSizePixel = 2
+Win.BorderColor3 = Color3.new(0.3,0.4,0.8)
+Win.Parent = Gui
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,0,0,35)
+Title.BackgroundColor3 = Color3.new(0.2,0.3,0.7)
+Title.Text = "🎯 VISION5 - SILENT AIM HOÀN CHỈNH"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.Parent = Win
+
+-- Kéo di chuyển
+local Drag,a,b=false,nil,nil
+Win.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then Drag,a,b=true,i.Position,Win.Position end end)
+UI.InputChanged:Connect(function(i) if Drag then Win.Position=UDim2.new(b.X.Scale,b.X.Offset+(i.Position-a).X,b.Y.Scale,b.Y.Offset+(i.Position-a).Y) end end)
+UI.InputEnded:Connect(function() Drag=false end)
+
+NutAnHien.MouseButton1Click:Connect(function() Hien=not Hien Win.Visible=Hien NutAnHien.Text=Hien and"🔽 ẨN GUI"or"🔼 HIỆN GUI" end)
+
+local NoiDung = Instance.new("Frame")
+NoiDung.Size = UDim2.new(1,-10,1,-50)
+NoiDung.Position = UDim2.new(0,5,0,40)
+NoiDung.BackgroundTransparency = 1
+NoiDung.Parent = Win
+
+-- Nút mở danh sách
+local NutDS = Instance.new("TextButton")
+NutDS.Size = UDim2.new(1,0,0,35)
+NutDS.Position = UDim2.new(0,0,0,0)
+NutDS.BackgroundColor3 = Color3.new(0.2,0.5,0.9)
+NutDS.Text = "📋 DANH SÁCH MỤC TIÊU"
+NutDS.TextColor3 = Color3.new(1,1,1)
+NutDS.Font = Enum.Font.GothamBold
+NutDS.TextSize = 14
+NutDS.Parent = NoiDung
+NutDS.MouseButton1Click:Connect(MoDanhSach)
+
+-- Nút BẬT/TẮT SILENT AIM
+local NutSilent = Instance.new("TextButton")
+NutSilent.Size = UDim2.new(1,0,0,35)
+NutSilent.Position = UDim2.new(0,0,0,42)
+NutSilent.BackgroundColor3 = Color3.new(0.2,0.7,0.3)
+NutSilent.Text = "🤫 SILENT AIM: BẬT"
+NutSilent.TextColor3 = Color3.new(1,1,1)
+NutSilent.Font = Enum.Font.GothamBold
+NutSilent.TextSize = 14
+NutSilent.Parent = NoiDung
+NutSilent.MouseButton1Click:Connect(function()
+    C.SilentAim = not C.SilentAim
+    if C.SilentAim then
+        NutSilent.BackgroundColor3 = Color3.new(0.2,0.7,0.3)
+        NutSilent.Text = "🤫 SILENT AIM: BẬT"
+    else
+        NutSilent.BackgroundColor3 = Color3.new(0.7,0.2,0.2)
+        NutSilent.Text = "🤫 SILENT AIM: TẮT"
+    end
+end)
+
+-- Nút xoay
+local NutXoay = Instance.new("TextButton")
+NutXoay.Size = UDim2.new(1,0,0,35)
+NutXoay.Position = UDim2.new(0,0,0,84)
+NutXoay.BackgroundColor3 = Color3.new(0.3,0.3,0.3)
+NutXoay.Text = "🌀 BẬT XOAY"
+NutXoay.TextColor3 = Color3.new(1,1,1)
+NutXoay.Font = Enum.Font.GothamBold
+NutXoay.TextSize = 14
+NutXoay.Parent = NoiDung
+NutXoay.MouseButton1Click:Connect(function()
+    C.Xoay = not C.Xoay
+    if C.Xoay then
+        NutXoay.BackgroundColor3 = Color3.new(0.2,0.7,0.3)
+        NutXoay.Text = "🟢 ĐANG XOAY"
+        ChongSatThuong(true)
+    else
+        NutXoay.BackgroundColor3 = Color3.new(0.3,0.3,0.3)
+        NutXoay.Text = "🔴 ĐÃ DỪNG"
+        ChongSatThuong(false)
+        KhoiPhuc()
+    end
+end)
+
+-- Ô tốc độ + nút OK
+local KhungNhap = Instance.new("Frame")
+KhungNhap.Size = UDim2.new(1,0,0,35)
+KhungNhap.Position = UDim2.new(0,0,0,126)
+KhungNhap.BackgroundTransparency = 1
+KhungNhap.Parent = NoiDung
+local NhanTocDo = Instance.new("TextBox")
+NhanTocDo.Size = UDim2.new(0.75,-5,1,0)
+NhanTocDo.BackgroundColor3 = Color3.new(0.15,0.35,0.6)
+NhanTocDo.Text = "⚡ Tốc độ: "..C.TocDo
+NhanTocDo.TextColor3 = Color3.new(1,1,1)
+NhanTocDo.Font = Enum.Font.Gotham
+NhanTocDo.TextSize = 13
+NhanTocDo.Parent = KhungNhap
+local NutOk = Instance.new("TextButton")
+NutOk.Size = UDim2.new(0.25,-5,1,0)
+NutOk.Position = UDim2.new(0.75,5,0,0)
+NutOk.BackgroundColor3 = Color3.new(0,0.8,0.2)
+NutOk.Text = "✅ OK"
+NutOk.TextColor3 = Color3.new(1,1,1)
+NutOk.Font = Enum.Font.GothamBold
+NutOk.TextSize = 13
+NutOk.Parent = KhungNhap
+local function CapNhatTocDo()
+    local s = tonumber(NhanTocDo.Text)
+    if s and s>=0.5 and s<=2000000 then C.TocDo=s NhanTocDo.Text="⚡ Tốc độ: "..s else NhanTocDo.Text="⚡ Tốc độ: "..C.TocDo end
+end
+NutOk.MouseButton1Click:Connect(CapNhatTocDo)
+NhanTocDo.FocusLost:Connect(function(e) if e then CapNhatTocDo() end end)
+
+-- Thanh trượt
+local function Thanh(t,mi,ma,mac,k,y)
+    local l=Instance.new("TextLabel") l.Size=UDim2.new(1,0,0,20) l.Position=UDim2.new(0,0,0,y) l.BackgroundTransparency=1 l.Text=t..": "..mac l.TextColor3=Color3.new(0.9,0.9,0.9) l.Font=Enum.Font.Gotham l.TextSize=13 l.Parent=NoiDung
+    local bar=Instance.new("TextButton") bar.Size=UDim2.new(1,0,0,18) bar.Position=UDim2.new(0,0,0,y+20) bar.BackgroundColor3=Color3.new(0.2,0.2,0.4) bar.Text="" bar.Parent=NoiDung
+    local n=Instance.new("Frame") n.Size=UDim2.new(0,15,1,0) n.BackgroundColor3=Color3.new(0.3,0.7,1) n.Parent=bar local kc=false
+    bar.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then kc=true end end)
+    UI.InputChanged:Connect(function(i) if kc then local x=math.clamp((i.Position.X-bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1) local g=mi+(ma-mi)*x;g=math.floor(mi)==mi and math.floor(g) or tonumber(string.format("%.1f",g)) C[k]=g n.Position=UDim2.new(x,-7,0,0) l.Text=t..": "..g end end)
+    UI.InputEnded:Connect(function() kc=false end)
+end
+Thanh("⭕ Bán kính xoay",1,55,9,"BanKinh",168)
+Thanh("📐 Độ cao",0,12,4,"Cao",211)
+
+-- Nút bật/tắt ESP
+local NutESP = Instance.new("TextButton")
+NutESP.Size = UDim2.new(1,0,0,35)
+NutESP.Position = UDim2.new(0,0,0,254)
+NutESP.BackgroundColor3 = Color3.new(0.2,0.7,0.3)
+NutESP.Text = "👁️ ESP: ĐANG BẬT"
+NutESP.TextColor3 = Color3.new(1,1,1)
+NutESP.Font = Enum.Font.GothamBold
+NutESP.TextSize = 14
+NutESP.Parent = NoiDung
+NutESP.MouseButton1Click:Connect(function()
+    ESP_Bat=not ESP_Bat
+    if ESP_Bat then NutESP.BackgroundColor3=Color3.new(0.2,0.7,0.3) NutESP.Text="👁️ ESP: ĐANG BẬT"
+    else NutESP.BackgroundColor3=Color3.new(0.7,0.2,0.2) NutESP.Text="👁️ ESP: ĐÃ TẮT" end
+end)
+
+-- Hiện mục tiêu
+local TenT = Instance.new("TextLabel") TenT.Size=UDim2.new(1,0,0,35) TenT.Position=UDim2.new(0,0,0,295) TenT.BackgroundColor3=Color3.new(0.15,0.15,0.3) TenT.Text="🎯 CHƯA CHỌN" TenT.TextColor3=Color3.new(1,0.4,0.4) TenT.Font=Enum.Font.GothamBold TenT.TextSize=14 TenT.Parent=NoiDung
+Run.Heartbeat:Connect(function() TenT.Text=Tar and"🎯 KHÓA: "..string.upper(Players:GetPlayerFromCharacter(Tar).Name)or"🎯 CHƯA CHỌN" end)
